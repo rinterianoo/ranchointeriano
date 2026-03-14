@@ -23,9 +23,8 @@ const Admin = () => {
   const [preciosCalendario, setPreciosCalendario] = useState({});
   const [cargandoCalendario, setCargandoCalendario] = useState(false);
   
-  // Estados para alertas de reservas
-  const [mensajeReserva, setMensajeReserva] = useState('');
-  const [errorReserva, setErrorReserva] = useState('');
+  // Estados para modal de reservas
+  const [modalReserva, setModalReserva] = useState({ mostrar: false, tipo: '', mensaje: '' });
 
   // Contexto de autenticación
   const { usuario, logout } = useContext(AuthContext);
@@ -93,37 +92,36 @@ const Admin = () => {
 
   const cambiarEstado = async (id, nuevoEstado) => {
     try {
-      setErrorReserva('');
-      setMensajeReserva('');
+      setModalReserva({ mostrar: false, tipo: '', mensaje: '' });
       
       await reservasService.actualizarEstado(id, nuevoEstado);
       
       // Mostrar mensaje de éxito según el estado
       let mensaje = '';
       if (nuevoEstado === 'confirmada') {
-        mensaje = '✅ Reserva confirmada exitosamente';
+        mensaje = 'Reserva confirmada exitosamente';
       } else if (nuevoEstado === 'cancelada') {
-        mensaje = '❌ Reserva cancelada exitosamente';
+        mensaje = 'Reserva cancelada exitosamente';
       } else if (nuevoEstado === 'completada') {
-        mensaje = '🏁 Reserva marcada como completada';
+        mensaje = 'Reserva marcada como completada';
       }
       
-      setMensajeReserva(mensaje);
+      setModalReserva({ mostrar: true, tipo: 'exito', mensaje });
       
-      // Limpiar mensaje después de 4 segundos
+      // Cerrar modal automáticamente después de 3 segundos
       setTimeout(() => {
-        setMensajeReserva('');
-      }, 4000);
+        setModalReserva({ mostrar: false, tipo: '', mensaje: '' });
+      }, 3000);
       
       cargarReservas();
     } catch (err) {
       const errorMsg = err.response?.data?.mensaje || 'Error al actualizar estado de la reserva';
-      setErrorReserva(errorMsg);
+      setModalReserva({ mostrar: true, tipo: 'error', mensaje: errorMsg });
       
-      // Limpiar error después de 5 segundos
+      // Cerrar modal automáticamente después de 4 segundos
       setTimeout(() => {
-        setErrorReserva('');
-      }, 5000);
+        setModalReserva({ mostrar: false, tipo: '', mensaje: '' });
+      }, 4000);
     }
   };
 
@@ -316,26 +314,10 @@ const Admin = () => {
           {/* Calendario */}
           <div className="flex-1">
             {/* Leyenda */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4 sm:mb-6 text-xs">
-              <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
-                <div className="w-3 h-3 bg-green-500 rounded flex-shrink-0"></div>
-                <span>Disponible</span>
-              </div>
-              <div className="flex items-center gap-2 p-2 bg-red-50 rounded-lg">
-                <div className="w-3 h-3 bg-red-500 rounded flex-shrink-0"></div>
-                <span>Bloqueada</span>
-              </div>
-              <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg">
-                <div className="w-3 h-3 bg-yellow-500 rounded flex-shrink-0"></div>
-                <span>Pendiente</span>
-              </div>
+            <div className="flex justify-center mb-4 sm:mb-6 text-xs">
               <div className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg">
                 <div className="w-3 h-3 bg-orange-500 rounded flex-shrink-0"></div>
                 <span>Confirmada</span>
-              </div>
-              <div className="flex items-center gap-2 p-2 bg-primary-50 rounded-lg">
-                <div className="w-3 h-3 bg-primary-500 rounded flex-shrink-0"></div>
-                <span>Seleccionada</span>
               </div>
             </div>
 
@@ -415,12 +397,6 @@ const Admin = () => {
                     <div className="text-xs lg:text-sm text-gray-700 leading-none font-semibold">
                       Q{Number(precioNoche).toLocaleString('es-GT')}
                     </div>
-                    {tieneReservaConfirmada && (
-                      <div className="text-orange-700 text-xs leading-none font-bold">CONFIRMADA</div>
-                    )}
-                    {tieneReservaPendiente && (
-                      <div className="text-yellow-700 text-xs leading-none font-bold">PENDIENTE</div>
-                    )}
                     {estaBloqueda && !tieneReserva && (
                       <div className="text-red-600 text-xs leading-none font-bold">BLOQUEADA</div>
                     )}
@@ -620,20 +596,6 @@ const Admin = () => {
             {/* VISTA: RESERVACIONES */}
             {vista === 'reservaciones' && (
               <div className="space-y-4 sm:space-y-6">
-                {/* Alertas de reservas */}
-                {mensajeReserva && (
-                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-                    <i className="fas fa-check-circle mr-2"></i>
-                    {mensajeReserva}
-                  </div>
-                )}
-                
-                {errorReserva && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                    <i className="fas fa-exclamation-circle mr-2"></i>
-                    {errorReserva}
-                  </div>
-                )}
                 
                 {/* Próximas Reservaciones - Estilo Airbnb */}
                 <div>
@@ -778,20 +740,17 @@ const Admin = () => {
                       {reservasEnPagina.map((reserva) => (
                       <div
                         key={reserva.id}
-                        className="bg-white rounded-lg p-3 sm:p-6 shadow border-l-4"
-                        style={{
-                          borderLeftColor: 
-                            reserva.estado === 'confirmada' ? '#10b981' :
-                            reserva.estado === 'cancelada' ? '#ef4444' :
-                            reserva.estado === 'completada' ? '#3b82f6' :
-                            '#f59e0b'
-                        }}
+                        className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
                       >
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0 mb-3">
-                          <h3 className="text-base sm:text-lg font-bold text-gray-800 break-words">
-                            {reserva.usuario_nombre}
-                          </h3>
-                          <span className={`text-xs font-bold px-2 py-1 rounded w-fit ${
+                        {/* Header compacto */}
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-bold text-gray-900 truncate">
+                              {reserva.usuario_nombre}
+                            </h3>
+                            <p className="text-xs text-gray-500 truncate">{reserva.usuario_email}</p>
+                          </div>
+                          <span className={`text-xs font-semibold px-2 py-1 rounded-full ml-2 ${
                             reserva.estado === 'confirmada' ? 'bg-green-100 text-green-700' :
                             reserva.estado === 'cancelada' ? 'bg-red-100 text-red-700' :
                             reserva.estado === 'completada' ? 'bg-blue-100 text-blue-700' :
@@ -801,44 +760,57 @@ const Admin = () => {
                           </span>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600 mb-4">
-                          <p><i className="fas fa-envelope mr-2 text-primary-600"></i><span className="break-all">{reserva.usuario_email}</span></p>
-                          {reserva.usuario_telefono && (
-                            <p><i className="fas fa-phone mr-2 text-primary-600"></i>{reserva.usuario_telefono}</p>
-                          )}
-                          <p className="col-span-1 sm:col-span-2"><i className="fas fa-calendar mr-2 text-primary-600"></i><span className="text-xs sm:text-sm">{new Date(reserva.fecha_entrada).toLocaleDateString('es-ES')} - {new Date(reserva.fecha_salida).toLocaleDateString('es-ES')}</span></p>
-                          <p><i className="fas fa-users mr-2 text-primary-600"></i>{reserva.num_personas} personas</p>
-                        </div>
-
-                        <div className="mb-4 text-lg sm:text-xl font-bold text-primary-600">
-                          Q{Number(reserva.precio_total).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
-
-                        {reserva.estado === 'pendiente' && (
-                          <div className="flex gap-2 flex-col sm:flex-row">
-                            <button
-                              onClick={() => cambiarEstado(reserva.id, 'confirmada')}
-                              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 sm:px-4 rounded-lg text-xs sm:text-sm transition-colors"
-                            >
-                              <i className="fas fa-check mr-1"></i> Aprobar
-                            </button>
-                            <button
-                              onClick={() => cambiarEstado(reserva.id, 'cancelada')}
-                              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 sm:px-4 rounded-lg text-xs sm:text-sm transition-colors"
-                            >
-                              <i className="fas fa-times mr-1"></i> Rechazar
-                            </button>
+                        {/* Info compacta */}
+                        <div className="grid grid-cols-2 gap-3 text-xs text-gray-600 mb-3">
+                          <div className="flex items-center gap-1">
+                            <i className="fas fa-calendar w-3 text-primary-600"></i>
+                            <span>{new Date(reserva.fecha_entrada).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} - {new Date(reserva.fecha_salida).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span>
                           </div>
-                        )}
+                          <div className="flex items-center gap-1">
+                            <i className="fas fa-users w-3 text-primary-600"></i>
+                            <span>{reserva.num_personas} personas</span>
+                          </div>
+                          {reserva.usuario_telefono && (
+                            <div className="flex items-center gap-1 col-span-2">
+                              <i className="fas fa-phone w-3 text-primary-600"></i>
+                              <span>{reserva.usuario_telefono}</span>
+                            </div>
+                          )}
+                        </div>
 
-                        {verHistorial && reserva.estado === 'confirmada' && (
-                          <button
-                            onClick={() => cambiarEstado(reserva.id, 'completada')}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 sm:px-4 rounded-lg text-xs sm:text-sm transition-colors"
-                          >
-                            <i className="fas fa-credit-card mr-1"></i> Marcar Pagada
-                          </button>
-                        )}
+                        {/* Precio y acciones */}
+                        <div className="flex justify-between items-center">
+                          <div className="text-base font-bold text-primary-600">
+                            Q{Number(reserva.precio_total).toLocaleString('es-GT')}
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            {reserva.estado === 'pendiente' && (
+                              <>
+                                <button
+                                  onClick={() => cambiarEstado(reserva.id, 'confirmada')}
+                                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-xs font-semibold transition-colors"
+                                >
+                                  <i className="fas fa-check mr-1"></i> Aprobar
+                                </button>
+                                <button
+                                  onClick={() => cambiarEstado(reserva.id, 'cancelada')}
+                                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-xs font-semibold transition-colors"
+                                >
+                                  <i className="fas fa-times mr-1"></i> Rechazar
+                                </button>
+                              </>
+                            )}
+                            {verHistorial && reserva.estado === 'confirmada' && (
+                              <button
+                                onClick={() => cambiarEstado(reserva.id, 'completada')}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-xs font-semibold transition-colors"
+                              >
+                                <i className="fas fa-credit-card mr-1"></i> Marcar Pagada
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     ))}
                     </div>
@@ -951,6 +923,38 @@ const Admin = () => {
         </div>
         </div>
       </div>
+      
+      {/* Modal de confirmación de reservas */}
+      {modalReserva.mostrar && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full mx-4 text-center animate-in slide-in-from-bottom duration-300">
+            {modalReserva.tipo === 'exito' ? (
+              <div className="mb-6">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i className="fas fa-check text-3xl text-green-600"></i>
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">¡Operación exitosa!</h3>
+                <p className="text-gray-600">{modalReserva.mensaje}</p>
+              </div>
+            ) : (
+              <div className="mb-6">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i className="fas fa-exclamation-triangle text-3xl text-red-600"></i>
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">Error</h3>
+                <p className="text-gray-600">{modalReserva.mensaje}</p>
+              </div>
+            )}
+            
+            <button
+              onClick={() => setModalReserva({ mostrar: false, tipo: '', mensaje: '' })}
+              className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
