@@ -620,7 +620,7 @@ const Admin = () => {
                       {reservasProximas.map((reserva) => (
                         <div
                           key={reserva.id}
-                          className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+                          className="bg-white rounded-lg p-3 shadow-sm border border-gray-400 hover:shadow-md transition-shadow"
                         >
                           {/* Header compacto */}
                           <div className="flex items-center gap-2 mb-2">
