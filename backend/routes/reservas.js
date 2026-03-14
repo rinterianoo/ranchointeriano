@@ -6,7 +6,7 @@ import nodemailer from 'nodemailer';
 const router = express.Router();
 
 // Configurar nodemailer con configuración más robusta para Gmail en Render
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   service: 'gmail', // Usar servicio predefinido de Gmail
   auth: {
     user: process.env.EMAIL_USER,
