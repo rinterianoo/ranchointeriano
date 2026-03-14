@@ -616,54 +616,45 @@ const Admin = () => {
                       <p className="text-base sm:text-lg text-gray-500">No hay reservaciones en los próximos 30 días</p>
                     </div>
                   ) : (
-                    <div className="space-y-4 sm:space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {reservasProximas.map((reserva) => (
                         <div
                           key={reserva.id}
-                          className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm hover:shadow-lg transition-shadow duration-300"
+                          className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
                         >
-                          {/* Fechas */}
-                          <div className="mb-6 text-center">
-                            <p className="text-sm sm:text-base text-gray-600 font-medium">
-                              {new Date(reserva.fecha_entrada).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - {new Date(reserva.fecha_salida).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                            </p>
-                          </div>
-
-                          {/* Avatar circular */}
-                          <div className="flex justify-center mb-6">
-                            <div className="w-20 sm:w-24 h-20 sm:h-24 rounded-full bg-gradient-to-br from-primary-600 to-primary-400 flex items-center justify-center text-white text-5xl sm:text-6xl font-bold">
+                          {/* Header compacto */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-600 to-primary-400 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                               {reserva.usuario_nombre.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-sm font-bold text-gray-900 truncate">
+                                {reserva.usuario_nombre}
+                              </h3>
+                              <p className="text-xs text-gray-500">
+                                {new Date(reserva.fecha_entrada).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - {new Date(reserva.fecha_salida).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                              </p>
                             </div>
                           </div>
 
-                          {/* Nombre */}
-                          <h3 className="text-2xl sm:text-3xl font-bold text-gray-800 text-center mb-6">
-                            {reserva.usuario_nombre}
-                          </h3>
-
-                          {/* Detalles */}
-                          <div className="space-y-3 sm:space-y-4 mb-6 text-center">
-                            <p className="text-sm sm:text-base text-gray-600">
-                              <i className="fas fa-users text-primary-600 mr-2"></i>
-                              {reserva.num_personas} {reserva.num_personas === 1 ? 'persona' : 'personas'}
-                            </p>
+                          {/* Info compacta */}
+                          <div className="text-xs text-gray-600 space-y-1 mb-2">
+                            <div className="flex items-center gap-1">
+                              <i className="fas fa-users w-3 text-primary-600"></i>
+                              <span>{reserva.num_personas} personas</span>
+                            </div>
                             {reserva.usuario_telefono && (
-                              <p className="text-sm sm:text-base text-gray-600">
-                                <i className="fas fa-phone text-primary-600 mr-2"></i>
-                                {reserva.usuario_telefono}
-                              </p>
+                              <div className="flex items-center gap-1">
+                                <i className="fas fa-phone w-3 text-primary-600"></i>
+                                <span className="truncate">{reserva.usuario_telefono}</span>
+                              </div>
                             )}
-                            <p className="text-sm sm:text-base text-gray-600">
-                              <i className="fas fa-envelope text-primary-600 mr-2"></i>
-                              <span className="break-all">{reserva.usuario_email}</span>
-                            </p>
                           </div>
 
                           {/* Precio */}
-                          <div className="text-center pt-6 border-t border-gray-200">
-                            <p className="text-xs sm:text-sm text-gray-500 mb-2">Total a pagar</p>
-                            <p className="text-3xl sm:text-4xl font-bold text-primary-600">
-                              Q{Number(reserva.precio_total).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          <div className="pt-2 border-t border-gray-100 text-center">
+                            <p className="text-sm font-bold text-primary-600">
+                              Q{Number(reserva.precio_total).toLocaleString('es-GT')}
                             </p>
                           </div>
                         </div>
