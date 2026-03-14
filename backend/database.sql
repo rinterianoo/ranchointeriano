@@ -57,10 +57,39 @@ CREATE TABLE IF NOT EXISTS imagenes_propiedad (
     FOREIGN KEY (propiedad_id) REFERENCES propiedades(id) ON DELETE CASCADE
 );
 
+-- Tabla de precios dinámicos por noche
+CREATE TABLE IF NOT EXISTS precios_noche (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    propiedad_id INT NOT NULL,
+    fecha DATE NOT NULL,
+    precio DECIMAL(10,2) NOT NULL,
+    estado ENUM('disponible', 'bloqueada') DEFAULT 'disponible',
+    comentario TEXT,
+    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_fecha_propiedad (propiedad_id, fecha),
+    FOREIGN KEY (propiedad_id) REFERENCES propiedades(id) ON DELETE CASCADE,
+    INDEX idx_fecha_propiedad (propiedad_id, fecha)
+);
+
 -- Insertar usuario administrador por defecto
 INSERT INTO usuarios (nombre, email, password, rol) 
 VALUES ('Administrador', 'admin@monterrico.com', '$2a$10$xQZHpnEqVvFHhFw5N8RxIeGlQq4J3KZJ0Vz8YRqxVTKZb5Zx5YqLq', 'admin');
 -- Contraseña: admin123 (cambiar en producción)
+
+-- Tabla de reseñas
+CREATE TABLE IF NOT EXISTS resenas (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    propiedad_id INT NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    ubicacion VARCHAR(150),
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    texto TEXT NOT NULL,
+    imagen VARCHAR(255),
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    activo BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (propiedad_id) REFERENCES propiedades(id) ON DELETE CASCADE,
+    INDEX idx_propiedad_rating (propiedad_id, rating)
+);
 
 -- Insertar propiedad de ejemplo
 INSERT INTO propiedades (nombre, descripcion, direccion, precio_noche, capacidad_personas, num_habitaciones, num_banos)

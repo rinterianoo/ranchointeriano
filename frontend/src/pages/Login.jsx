@@ -1,5 +1,5 @@
 import { useState, useContext } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 const Login = () => {
@@ -17,7 +17,7 @@ const Login = () => {
 
     try {
       await login(email, password);
-      navigate('/');
+      navigate('/admin');
     } catch (err) {
       setError(err.response?.data?.mensaje || 'Error al iniciar sesión');
     } finally {
@@ -26,20 +26,17 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 pt-20">
       <div className="max-w-md w-full space-y-8">
         <div>
           <div className="text-center">
             <i className="fas fa-umbrella-beach text-primary-600 text-5xl mb-4"></i>
           </div>
           <h2 className="text-center text-3xl font-extrabold text-gray-900">
-            Iniciar Sesión
+            Inicio de Sesión
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            O{' '}
-            <Link to="/registro" className="font-medium text-primary-600 hover:text-primary-500">
-              crea una cuenta nueva
-            </Link>
+            Ingresa tus credenciales
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

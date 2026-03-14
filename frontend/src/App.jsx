@@ -3,7 +3,9 @@ import { useContext } from 'react';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import PrivateRoute from './components/PrivateRoute';
 import Home from './pages/Home';
+import Reviews from './pages/Reviews';
 import Login from './pages/Login';
 import Registro from './pages/Registro';
 import Reservar from './pages/Reservar';
@@ -49,14 +51,15 @@ function AppContent() {
         <main className="flex-grow">
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/reviews" element={<Reviews />} />
             <Route path="/reservar" element={<Reservar />} />
             <Route path="/login" element={<Login />} />
             <Route 
               path="/admin" 
               element={
-                <RutaAdmin>
+                <PrivateRoute>
                   <Admin />
-                </RutaAdmin>
+                </PrivateRoute>
               } 
             />
             <Route path="*" element={<Navigate to="/" />} />

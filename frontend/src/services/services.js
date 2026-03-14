@@ -59,6 +59,50 @@ export const propiedadesService = {
   }
 };
 
+export const preciosService = {
+  // Obtener precios dinámicos para un rango de fechas
+  obtenerPrecios: async (propiedadId, fecha_entrada, fecha_salida) => {
+    const response = await api.get(`/propiedades/${propiedadId}/precios`, {
+      params: { fecha_entrada, fecha_salida }
+    });
+    return response.data;
+  },
+
+  // Obtener fechas bloqueadas
+  obtenerBloqueadas: async (propiedadId) => {
+    const response = await api.get(`/propiedades/${propiedadId}/bloqueadas`);
+    return response.data;
+  },
+
+  // Guardar un precio de noche
+  guardarPrecio: async (propiedadId, fecha, precio, estado = 'disponible', comentario = '') => {
+    const response = await api.post(`/propiedades/${propiedadId}/precios`, {
+      fecha,
+      precio,
+      estado,
+      comentario
+    });
+    return response.data;
+  },
+
+  // Actualizar múltiples precios
+  actualizarPrecios: async (propiedadId, precios) => {
+    const response = await api.patch(`/propiedades/${propiedadId}/precios`, {
+      precios
+    });
+    return response.data;
+  },
+
+  // Cambiar estado de una noche (bloquear/desbloquear)
+  cambiarEstadoNoche: async (propiedadId, fecha, estado, comentario = '') => {
+    const response = await api.patch(`/propiedades/${propiedadId}/precios/${fecha}`, {
+      estado,
+      comentario
+    });
+    return response.data;
+  }
+};
+
 export const reservasService = {
   // Verificar disponibilidad
   verificarDisponibilidad: async (propiedadId, fecha_entrada, fecha_salida) => {

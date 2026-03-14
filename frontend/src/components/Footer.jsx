@@ -6,7 +6,7 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4">
               <i className="fas fa-umbrella-beach mr-2"></i>
-              Casa Vacacional Monterrico
+              Rancho Interiano
             </h3>
             <p className="text-gray-400">
               Disfruta de unas vacaciones inolvidables en la playa de Monterrico, Guatemala.
@@ -19,12 +19,8 @@ const Footer = () => {
             </h3>
             <ul className="text-gray-400 space-y-2">
               <li>
-                <i className="fas fa-envelope mr-2"></i>
-                info@monterrico.com
-              </li>
-              <li>
                 <i className="fas fa-phone mr-2"></i>
-                +502 1234-5678
+                49048991
               </li>
               <li>
                 <i className="fas fa-location-dot mr-2"></i>
@@ -34,24 +30,22 @@ const Footer = () => {
           </div>
           <div>
             <h3 className="text-lg font-semibold mb-4">
-              <i className="fas fa-share-nodes mr-2"></i>
-              Síguenos
+              <i className="fab fa-airbnb mr-2"></i>
+              Airbnb
             </h3>
-            <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <i className="fab fa-facebook text-2xl"></i>
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <i className="fab fa-instagram text-2xl"></i>
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <i className="fab fa-whatsapp text-2xl"></i>
-              </a>
-            </div>
+            <a
+              href="https://www.airbnb.mx/rooms/1601092526406882021?check_in=2026-03-27&check_out=2026-03-28&guests=1&adults=1&s=67&unique_share_id=7a2026ac-5ac4-42ec-89f4-54605680f9b9"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center text-gray-400 hover:text-white transition-colors"
+            >
+              <i className="fas fa-arrow-up-right-from-square mr-2"></i>
+              Ver anuncio en Airbnb
+            </a>
           </div>
         </div>
         <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-          <p>&copy; {new Date().getFullYear()} Casa Vacacional Monterrico. Todos los derechos reservados.</p>
+          <p>&copy; {new Date().getFullYear()} Rancho Interiano. Todos los derechos reservados.</p>
         </div>
       </div>
     </footer>

@@ -1,7 +1,12 @@
-import { useState, useEffect } from 'react';
-import { propiedadesService, reservasService } from '../services/services';
+import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
+import { propiedadesService, reservasService, preciosService } from '../services/services';
+import Calendar from '../components/Calendar';
+import ImageCarousel from '../components/ImageCarousel';
 
 const Reservar = () => {
+  const location = useLocation();
+  const formularioRef = useRef(null);
   const [propiedades, setPropiedades] = useState([]);
   const [propiedadSeleccionada, setPropiedadSeleccionada] = useState(null);
   const [fechasOcupadas, setFechasOcupadas] = useState([]);
@@ -14,12 +19,13 @@ const Reservar = () => {
     email: '',
     telefono: ''
   });
-  const [disponibilidad, setDisponibilidad] = useState(null);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
   const [cargando, setCargando] = useState(false);
   const [precioTotal, setPrecioTotal] = useState(0);
   const [numNoches, setNumNoches] = useState(0);
+  const [preciosPorNoche, setPreciosPorNoche] = useState({});
+  const [precioBase, setPrecioBase] = useState(0);
 
   useEffect(() => {
     cargarPropiedades();
@@ -34,6 +40,20 @@ const Reservar = () => {
   useEffect(() => {
     calcularPrecio();
   }, [formData.fecha_entrada, formData.fecha_salida, propiedadSeleccionada]);
+
+  useEffect(() => {
+    if (location.hash === '#formulario-reserva' && formularioRef.current) {
+      // Scroll con offset para compensar el navbar fijo
+      const navbarHeight = 100; // Altura aproximada del navbar + margen
+      const elementPosition = formularioRef.current.getBoundingClientRect().top + window.pageYOffset;
+      const offsetPosition = elementPosition - navbarHeight;
+      
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+    }
+  }, [location.hash, propiedadSeleccionada]);
 
   const cargarPropiedades = async () => {
     try {
@@ -52,11 +72,11 @@ const Reservar = () => {
       const data = await reservasService.getFechasOcupadas(propiedadSeleccionada.id);
       setFechasOcupadas(data.fechas_ocupadas);
     } catch (err) {
-      console.error('Error al cargar fechas ocupadas:', err);
+      // Error silencioso
     }
   };
 
-  const calcularPrecio = () => {
+  const calcularPrecio = async () => {
     if (propiedadSeleccionada && formData.fecha_entrada && formData.fecha_salida) {
       const entrada = new Date(formData.fecha_entrada);
       const salida = new Date(formData.fecha_salida);
@@ -64,33 +84,66 @@ const Reservar = () => {
       
       if (noches > 0) {
         setNumNoches(noches);
-        setPrecioTotal(noches * propiedadSeleccionada.precio_noche);
+        
+        try {
+          // Cargar precios dinámicos
+          const data = await preciosService.obtenerPrecios(
+            propiedadSeleccionada.id,
+            formData.fecha_entrada,
+            formData.fecha_salida
+          );
+          
+          setPrecioBase(data.precioBase);
+          
+          // Verificar si hay fechas bloqueadas en el rango
+          const fechasBlockeadas = data.precios.filter(p => p.estado === 'bloqueada');
+          if (fechasBlockeadas.length > 0) {
+            setPrecioTotal(0);
+            setError(`Las siguientes fechas no están disponibles: ${fechasBlockeadas.map(f => f.fecha).join(', ')}`);
+            return;
+          }
+          
+          // Crear mapa de precios desde precios_noche
+          const preciosPersonalizados = {};
+          data.precios.forEach(p => {
+            if (p.estado !== 'bloqueada') {
+              // Normalizar fecha al formato ISO YYYY-MM-DD
+              // La fecha puede venir como "2026-03-25" o "2026-03-25T00:00:00Z"
+              const fechaNormalizada = p.fecha.split('T')[0];
+              preciosPersonalizados[fechaNormalizada] = Number(p.precio);
+            }
+          });
+          setPreciosPorNoche(preciosPersonalizados);
+          
+          // Calcular total sumando precios de cada noche
+          let total = 0;
+          let fecha = new Date(entrada);
+          let desglose = [];
+          
+          while (fecha < salida) {
+            const fechaStr = fecha.toISOString().split('T')[0];
+            const precioEnMapa = preciosPersonalizados[fechaStr];
+            const precio = precioEnMapa !== undefined ? precioEnMapa : data.precioBase;
+            
+            desglose.push({ fecha: fechaStr, precio });
+            total += Number(precio);
+            fecha.setDate(fecha.getDate() + 1);
+          }
+          
+          setPrecioTotal(total);
+          setError(''); // Limpiar error si todo está bien
+        } catch (err) {
+          // Usar precio base del formulario si el servicio falla
+          const precioBase = Number(propiedadSeleccionada.precio_noche);
+          setPrecioBase(precioBase);
+          setPrecioTotal(noches * precioBase);
+          setPreciosPorNoche({});
+        }
       } else {
         setNumNoches(0);
         setPrecioTotal(0);
+        setPreciosPorNoche({});
       }
-    }
-  };
-
-  const verificarDisponibilidad = async () => {
-    if (!formData.fecha_entrada || !formData.fecha_salida) {
-      setError('Por favor selecciona las fechas');
-      return;
-    }
-
-    try {
-      setCargando(true);
-      setError('');
-      const data = await reservasService.verificarDisponibilidad(
-        propiedadSeleccionada.id,
-        formData.fecha_entrada,
-        formData.fecha_salida
-      );
-      setDisponibilidad(data);
-    } catch (err) {
-      setError('Error al verificar disponibilidad');
-    } finally {
-      setCargando(false);
     }
   };
 
@@ -99,17 +152,19 @@ const Reservar = () => {
       ...formData,
       [e.target.name]: e.target.value
     });
-    setDisponibilidad(null);
+  };
+
+  const handleSelectDates = (fechaEntrada, fechaSalida) => {
+    setFormData({
+      ...formData,
+      fecha_entrada: fechaEntrada,
+      fecha_salida: fechaSalida
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!disponibilidad?.disponible) {
-      setError('Por favor verifica la disponibilidad primero');
-      return;
-    }
-
     if (!formData.nombre || !formData.email || !formData.telefono) {
       setError('Por favor completa todos tus datos de contacto');
       return;
@@ -121,7 +176,8 @@ const Reservar = () => {
       
       const datosReserva = {
         propiedad_id: propiedadSeleccionada.id,
-        ...formData
+        ...formData,
+        precio_total: precioTotal  // Enviar precio calculado con precios dinámicos
       };
 
       await reservasService.crear(datosReserva);
@@ -137,7 +193,6 @@ const Reservar = () => {
         email: '',
         telefono: ''
       });
-      setDisponibilidad(null);
       setPrecioTotal(0);
       setNumNoches(0);
     } catch (err) {
@@ -174,224 +229,50 @@ const Reservar = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <>
+      {/* Modal de éxito */}
+      {exito && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full mx-4 text-center animate-fadeIn">
+            <div className="text-6xl text-green-500 mb-4">
+              <i className="fas fa-check-circle"></i>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">¡Éxito!</h2>
+            <p className="text-gray-600 mb-6 text-lg">{exito}</p>
+            <div className="space-y-3">
+              <p className="text-sm text-gray-500">
+                Te enviaremos confirmación por correo electrónico
+              </p>
+              <button
+                onClick={() => setExito('')}
+                className="w-full bg-primary-600 hover:bg-primary-700 text-white py-3 px-4 rounded-lg font-medium transition-colors"
+              >
+                <i className="fas fa-home mr-2"></i>
+                Volver al Inicio
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="min-h-screen bg-gray-50 py-6 md:py-12 pt-20 md:pt-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8 text-center">
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6 md:mb-8 text-center">
           <i className="fas fa-calendar-check text-primary-600 mr-3"></i>
-          Reservar Casa Vacacional
+          Reservar Rancho Interiano
         </h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
           {/* Información de la propiedad */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold mb-4">{propiedadSeleccionada.nombre}</h2>
+          <div id="formulario-reserva" ref={formularioRef} className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+            <h2 className="text-xl md:text-2xl font-bold mb-4">Rancho Interiano - Paraíso en la Playa</h2>
             
-            {/* Imagen principal */}
-            <div className="bg-gray-200 h-96 rounded-lg mb-4 overflow-hidden">
-              {propiedadSeleccionada.imagen_principal ? (
-                <img 
-                  src={propiedadSeleccionada.imagen_principal} 
-                  alt={propiedadSeleccionada.nombre}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <i className="fas fa-image text-6xl text-gray-400"></i>
-                </div>
-              )}
-            </div>
-
-            {/* Galería de fotos */}
+            {/* Carrusel de imágenes */}
             <div className="mb-6">
-              <h3 className="text-xl font-bold mb-3">Galería de Fotos</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {/* Habitaciones */}
-                <div className="relative group">
-                  <img src="/images/propiedades/cuartoprincipal.jpg" alt="Habitación Principal" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Habitación Principal</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/cuartoprincipal2.jpg" alt="Habitación Principal Vista 2" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Habitación Principal</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/cuartosecundario.jpg" alt="Habitación Secundaria" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Habitación Secundaria</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/cuartosecundario2.jpg" alt="Habitación Secundaria 2" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Habitación Secundaria</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/cuartosecundario3.jpg" alt="Habitación Secundaria 3" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Habitación Secundaria</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/cuartotres.jpg" alt="Tercer Cuarto" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Tercer Cuarto</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/cuartotres2.jpg" alt="Tercer Cuarto Vista 2" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Tercer Cuarto</p>
-                  </div>
-                </div>
-
-                {/* Baños */}
-                <div className="relative group">
-                  <img src="/images/propiedades/baño.jpg" alt="Baño" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Baño</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/bañoprivado.jpg" alt="Baño Privado" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Baño Privado</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/bañopiscina.jpg" alt="Baño junto a Piscina" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Baño Piscina</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/duchafuera.jpg" alt="Ducha Exterior" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Ducha Exterior</p>
-                  </div>
-                </div>
-
-                {/* Áreas comunes */}
-                <div className="relative group">
-                  <img src="/images/propiedades/salacomedorcocina.jpg" alt="Sala, Comedor y Cocina" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Sala, Comedor y Cocina</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/cocina.jpg" alt="Cocina Equipada" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Cocina Equipada</p>
-                  </div>
-                </div>
-
-                {/* Áreas recreativas */}
-                <div className="relative group">
-                  <img src="/images/propiedades/piscina.jpg" alt="Piscina Privada" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Piscina Privada</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/pergola.jpg" alt="Pérgola" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Pérgola</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/churrasquera.jpg" alt="Churrasquera/BBQ" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Churrasquera/BBQ</p>
-                  </div>
-                </div>
-
-                {/* Exteriores */}
-                <div className="relative group">
-                  <img src="/images/propiedades/casaafuera.jpg" alt="Vista Exterior" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Vista Exterior</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/IMG-20251207-WA0010.jpg" alt="Jardín y Áreas Verdes" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Jardín y Áreas Verdes</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/IMG-20251207-WA0013.jpg" alt="Estacionamiento" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Estacionamiento</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/IMG-20251207-WA0020.jpg" alt="Áreas Verdes" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Áreas Verdes</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/IMG-20251207-WA0024.jpg" alt="Jardín Tropical" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Jardín Tropical</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/IMG-20251207-WA0025.jpg" alt="Vista del Jardín" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Vista del Jardín</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/IMG-20251207-WA0026.jpg" alt="Área de Parqueo" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Área de Parqueo</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/IMG-20251207-WA0027.jpg" alt="Terraza" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Terraza</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/IMG-20251207-WA0028.jpg" alt="Exteriores" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Exteriores</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/IMG-20251207-WA0031.jpg" alt="Vista Panorámica" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Vista Panorámica</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/IMG-20251207-WA0032.jpg" alt="Zona de Descanso" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Zona de Descanso</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/IMG-20251207-WA0033.jpg" alt="Entrada" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Entrada</p>
-                  </div>
-                </div>
-                <div className="relative group">
-                  <img src="/images/propiedades/IMG-20251207-WA0034.jpg" alt="Ambiente Tropical" className="w-full h-32 object-cover rounded-lg" />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                    <p className="text-white text-sm font-semibold text-center px-2">Ambiente Tropical</p>
-                  </div>
-                </div>
-              </div>
+              <ImageCarousel />
             </div>
 
-            <p className="text-gray-600 mb-4">{propiedadSeleccionada.descripcion}</p>
+            {/* Características principales */}
             
             <div className="space-y-3 mb-6">
               <div className="flex items-center text-gray-700">
@@ -412,42 +293,29 @@ const Reservar = () => {
               </div>
             </div>
 
-            <div className="bg-primary-50 p-4 rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold text-gray-700">Precio por noche:</span>
-                <span className="text-2xl font-bold text-primary-600">
-                  Q{propiedadSeleccionada.precio_noche.toFixed(2)}
-                </span>
+            <div className="bg-cyan-50 border border-cyan-300 text-cyan-900 px-4 py-3 rounded mb-6">
+              <i className="fas fa-snowflake mr-2 text-cyan-600"></i>
+              <span className="font-semibold">Aire Acondicionado Automático:</span> Se enciende a las 9:00 PM y se apaga a las 9:00 AM del siguiente día.
+            </div>
+
+            <div className="bg-amber-50 border border-amber-300 text-amber-900 px-4 py-3 rounded mb-6">
+              <div className="space-y-1">
+                <div className="font-semibold">Entrada:</div>
+                <div>3:00 PM</div>
+                <div className="font-semibold mt-2">Salida:</div>
+                <div>11:00 AM</div>
               </div>
             </div>
           </div>
 
           {/* Formulario de reserva */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold mb-6">Detalles de la Reserva</h2>
+          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+            <h2 className="text-xl md:text-2xl font-bold mb-6">Detalles de la Reserva</h2>
             
             {error && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                 <i className="fas fa-exclamation-circle mr-2"></i>
                 {error}
-              </div>
-            )}
-            
-            {exito && (
-              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-                <i className="fas fa-check-circle mr-2"></i>
-                {exito}
-              </div>
-            )}
-
-            {disponibilidad && (
-              <div className={`px-4 py-3 rounded mb-4 ${
-                disponibilidad.disponible 
-                  ? 'bg-green-100 border border-green-400 text-green-700' 
-                  : 'bg-red-100 border border-red-400 text-red-700'
-              }`}>
-                <i className={`fas ${disponibilidad.disponible ? 'fa-check-circle' : 'fa-times-circle'} mr-2`}></i>
-                {disponibilidad.mensaje}
               </div>
             )}
 
@@ -500,34 +368,15 @@ const Reservar = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
                   <i className="fas fa-calendar-day mr-2"></i>
-                  Fecha de Entrada
+                  Selecciona tus fechas de hospedaje
                 </label>
-                <input
-                  type="date"
-                  name="fecha_entrada"
-                  value={formData.fecha_entrada}
-                  onChange={handleChange}
-                  min={obtenerFechaMinima()}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  <i className="fas fa-calendar-day mr-2"></i>
-                  Fecha de Salida
-                </label>
-                <input
-                  type="date"
-                  name="fecha_salida"
-                  value={formData.fecha_salida}
-                  onChange={handleChange}
-                  min={formData.fecha_entrada || obtenerFechaMinima()}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                <Calendar 
+                  fechasOcupadas={fechasOcupadas}
+                  onSelectDates={handleSelectDates}
+                  propiedadId={propiedadSeleccionada.id}
                 />
               </div>
 
@@ -569,30 +418,37 @@ const Reservar = () => {
                     <span>Número de noches:</span>
                     <span className="font-semibold">{numNoches}</span>
                   </div>
-                  <div className="flex justify-between text-gray-700">
-                    <span>Precio por noche:</span>
-                    <span className="font-semibold">Q{propiedadSeleccionada.precio_noche.toFixed(2)}</span>
-                  </div>
+                  
+                  {Object.keys(preciosPorNoche).length > 0 && (
+                    <div className="border-t pt-2 space-y-1 text-sm mb-2">
+                      <p className="font-semibold text-gray-700">Desglose por noche:</p>
+                      {Array.from({ length: numNoches }, (_, i) => {
+                        const fecha = new Date(formData.fecha_entrada);
+                        fecha.setDate(fecha.getDate() + i);
+                        const fechaStr = fecha.toISOString().split('T')[0];
+                        const precio = preciosPorNoche[fechaStr] || precioBase;
+                        return (
+                          <div key={fechaStr} className="flex justify-between text-gray-600">
+                            <span>
+                              Noche {i + 1} ({fecha.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}):
+                            </span>
+                            <span>Q{Number(precio).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  
                   <div className="border-t pt-2 flex justify-between text-lg font-bold text-primary-600">
                     <span>Total:</span>
-                    <span>Q{precioTotal.toFixed(2)}</span>
+                    <span>Q{precioTotal.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               )}
 
               <button
-                type="button"
-                onClick={verificarDisponibilidad}
-                disabled={cargando || !formData.fecha_entrada || !formData.fecha_salida}
-                className="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <i className="fas fa-search mr-2"></i>
-                Verificar Disponibilidad
-              </button>
-
-              <button
                 type="submit"
-                disabled={cargando || !disponibilidad?.disponible}
+                disabled={cargando || !formData.fecha_entrada || !formData.fecha_salida}
                 className="w-full bg-primary-600 hover:bg-primary-700 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {cargando ? (
@@ -600,40 +456,25 @@ const Reservar = () => {
                     <i className="fas fa-spinner fa-spin mr-2"></i>
                     Procesando...
                   </>
+                ) : !formData.fecha_entrada || !formData.fecha_salida ? (
+                  <>
+                    <i className="fas fa-calendar-check mr-2"></i>
+                    Selecciona las fechas
+                  </>
                 ) : (
                   <>
                     <i className="fas fa-check-circle mr-2"></i>
-                    Confirmar Reserva
+                    Enviar Solicitud de Reserva
                   </>
                 )}
               </button>
             </form>
 
-            {/* Leyenda de fechas ocupadas */}
-            {fechasOcupadas.length > 0 && (
-              <div className="mt-6 p-4 bg-yellow-50 rounded-lg">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                  <i className="fas fa-info-circle mr-2"></i>
-                  Fechas No Disponibles
-                </h3>
-                <div className="space-y-1 text-sm text-gray-600">
-                  {fechasOcupadas.slice(0, 5).map((reserva, index) => (
-                    <div key={index}>
-                      Del {new Date(reserva.fecha_entrada).toLocaleDateString()} al {new Date(reserva.fecha_salida).toLocaleDateString()}
-                    </div>
-                  ))}
-                  {fechasOcupadas.length > 5 && (
-                    <div className="text-gray-500 italic">
-                      y {fechasOcupadas.length - 5} más...
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
     </div>
+    </>
   );
 };
 

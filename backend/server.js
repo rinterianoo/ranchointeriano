@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import propiedadesRoutes from './routes/propiedades.js';
 import reservasRoutes from './routes/reservas.js';
+import resenasRoutes from './routes/resenas.js';
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/propiedades', propiedadesRoutes);
 app.use('/api/reservas', reservasRoutes);
+app.use('/api/resenas', resenasRoutes);
 
 // Manejo de errores 404
 app.use((req, res) => {

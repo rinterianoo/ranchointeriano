@@ -74,7 +74,7 @@ router.get('/fechas-ocupadas/:propiedadId', async (req, res) => {
 // Crear nueva reserva (sin autenticación requerida)
 router.post('/', async (req, res) => {
   try {
-    const { propiedad_id, fecha_entrada, fecha_salida, num_personas, comentarios, nombre, email, telefono } = req.body;
+    const { propiedad_id, fecha_entrada, fecha_salida, num_personas, comentarios, nombre, email, telefono, precio_total } = req.body;
     
     // Validar datos del cliente
     if (!nombre || !email || !telefono) {
@@ -122,7 +122,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ mensaje: 'Las fechas seleccionadas no están disponibles' });
     }
 
-    // Obtener información de la propiedad para calcular el precio
+    // Obtener información de la propiedad
     const [propiedades] = await db.query('SELECT precio_noche, capacidad_personas FROM propiedades WHERE id = ?', [propiedad_id]);
     
     if (propiedades.length === 0) {
@@ -142,13 +142,15 @@ router.post('/', async (req, res) => {
     const entrada = new Date(fecha_entrada);
     const salida = new Date(fecha_salida);
     const noches = Math.ceil((salida - entrada) / (1000 * 60 * 60 * 24));
-    const precio_total = noches * propiedad.precio_noche;
+    
+    // Usar precio_total enviado desde frontend, o calcular si no viene
+    const precioFinal = precio_total || (noches * propiedad.precio_noche);
 
     // Crear reserva
     const [resultado] = await db.query(`
       INSERT INTO reservas (usuario_id, propiedad_id, fecha_entrada, fecha_salida, num_personas, precio_total, comentarios, estado)
       VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente')
-    `, [usuario_id, propiedad_id, fecha_entrada, fecha_salida, num_personas, precio_total, comentarios]);
+    `, [usuario_id, propiedad_id, fecha_entrada, fecha_salida, num_personas, precioFinal, comentarios]);
 
     // Enviar email de confirmación (opcional)
     try {
@@ -165,7 +167,7 @@ router.post('/', async (req, res) => {
             <li><strong>Fecha de salida:</strong> ${fecha_salida}</li>
             <li><strong>Número de personas:</strong> ${num_personas}</li>
             <li><strong>Número de noches:</strong> ${noches}</li>
-            <li><strong>Precio total:</strong> Q${precio_total.toFixed(2)}</li>
+            <li><strong>Precio total:</strong> Q${precioFinal.toFixed(2)}</li>
           </ul>
           <p>Te contactaremos pronto para confirmar tu reserva.</p>
           <p>Gracias por elegir Casa Vacacional Monterrico.</p>
@@ -183,7 +185,7 @@ router.post('/', async (req, res) => {
         fecha_entrada,
         fecha_salida,
         num_personas,
-        precio_total,
+        precio_total: precioFinal,
         noches,
         estado: 'pendiente'
       }
@@ -212,8 +214,8 @@ router.get('/mis-reservas', verificarToken, async (req, res) => {
   }
 });
 
-// Obtener todas las reservas (solo admin)
-router.get('/todas', verificarToken, esAdmin, async (req, res) => {
+// Obtener todas las reservas (admin - sin autenticación requerida)
+router.get('/todas', async (req, res) => {
   try {
     const [reservas] = await db.query(`
       SELECT r.*, 
@@ -234,8 +236,8 @@ router.get('/todas', verificarToken, esAdmin, async (req, res) => {
   }
 });
 
-// Actualizar estado de reserva (solo admin)
-router.patch('/:id/estado', verificarToken, esAdmin, async (req, res) => {
+// Actualizar estado de reserva (admin - sin autenticación requerida)
+router.patch('/:id/estado', async (req, res) => {
   try {
     const { estado } = req.body;
     const { id } = req.params;
