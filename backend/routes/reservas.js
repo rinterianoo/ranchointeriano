@@ -174,7 +174,7 @@ router.post('/', async (req, res) => {
       // Enviar email simple al administrador PRIMERO (más importante)
       try {
         const adminEmail = await resend.emails.send({
-          from: 'Casa Vacacional Monterrico <onboarding@resend.dev>',
+          from: 'Casa Vacacional Monterrico <reservas@ranchointeriano.com>',
           to: process.env.EMAIL_USER, // Enviar al mismo email configurado
           subject: `🏖️ Nueva Reserva #${resultado.insertId} - ${nombre}`,
           html: `
@@ -230,7 +230,7 @@ router.post('/', async (req, res) => {
       // Enviar email al cliente (secundario)
       try {
         const clienteEmail = await resend.emails.send({
-          from: 'Casa Vacacional Monterrico <onboarding@resend.dev>',
+          from: 'Casa Vacacional Monterrico <reservas@ranchointeriano.com>',
           to: email,
           subject: 'Solicitud de Reserva Recibida - Casa Vacacional Monterrico',
           html: `
@@ -359,7 +359,7 @@ router.patch('/:id/estado', async (req, res) => {
 
         if (asunto) {
           await resend.emails.send({
-            from: 'Casa Vacacional Monterrico <onboarding@resend.dev>',
+            from: 'Casa Vacacional Monterrico <reservas@ranchointeriano.com>',
             to: reserva.email,
             subject: asunto,
             html: mensaje
