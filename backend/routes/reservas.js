@@ -5,19 +5,15 @@ import nodemailer from 'nodemailer';
 
 const router = express.Router();
 
-// Configurar nodemailer con configuración más robusta para Gmail en Render
+// Configurar nodemailer
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // Usar servicio predefinido de Gmail
+  host: process.env.EMAIL_HOST,
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
-  },
-  // Configuración adicional para servidores en la nube
-  pool: true, // Usar pool de conexiones
-  maxConnections: 5,
-  maxMessages: 100,
-  rateDelta: 20000, // 20 segundos entre lotes
-  rateLimit: 5 // máximo 5 emails por rateDelta
+  }
 });
 
 // Verificar disponibilidad de fechas

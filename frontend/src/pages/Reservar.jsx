@@ -254,9 +254,6 @@ const Reservar = () => {
             <h2 className="text-2xl font-bold text-gray-900 mb-3">¡Éxito!</h2>
             <p className="text-gray-600 mb-6 text-lg">{exito}</p>
             <div className="space-y-3">
-              <p className="text-sm text-gray-500">
-                Te enviaremos confirmación por correo electrónico
-              </p>
               <button
                 onClick={() => setExito('')}
                 className="w-full bg-primary-600 hover:bg-primary-700 text-white py-3 px-4 rounded-lg font-medium transition-colors"
