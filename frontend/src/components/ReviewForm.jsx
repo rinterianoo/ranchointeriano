@@ -78,7 +78,8 @@ const ReviewForm = ({ propiedadId = 1, onReviewSubmitted }) => {
         form.append('imagen', imagen);
       }
 
-      const response = await fetch('http://localhost:5000/api/resenas', {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const response = await fetch(`${API_URL}/resenas`, {
         method: 'POST',
         body: form
       });
