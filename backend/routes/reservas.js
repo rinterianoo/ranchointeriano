@@ -5,14 +5,22 @@ import nodemailer from 'nodemailer';
 
 const router = express.Router();
 
-// Configurar nodemailer
+// Configurar nodemailer con configuración optimizada para Gmail
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
-  secure: false,
+  port: parseInt(process.env.EMAIL_PORT) || 587,
+  secure: false, // true para 465, false para otros puertos
+  requireTLS: true, // Forzar TLS para Gmail
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
+  },
+  connectionTimeout: 60000, // 60 segundos
+  greetingTimeout: 30000, // 30 segundos
+  socketTimeout: 60000, // 60 segundos
+  tls: {
+    ciphers: 'SSLv3',
+    rejectUnauthorized: false
   }
 });
 
@@ -171,9 +179,15 @@ router.post('/', async (req, res) => {
 
     // PROCESAR EMAILS EN BACKGROUND (sin hacer fallar la reserva)
     setImmediate(async () => {
+      // Verificar configuración de email antes de intentar enviar
+      if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+        console.error('Configuración de email incompleta. Emails deshabilitados.');
+        return;
+      }
+
       // Enviar email de confirmación al cliente
       try {
-        await transporter.sendMail({
+        const clienteInfo = await transporter.sendMail({
           from: process.env.EMAIL_FROM,
           to: email,
           subject: 'Solicitud de Reserva - Casa Vacacional Monterrico',
@@ -190,18 +204,21 @@ router.post('/', async (req, res) => {
             </ul>
             <p>Te contactaremos pronto para confirmar tu reserva.</p>
             <p>Gracias por elegir Casa Vacacional Monterrico.</p>
-          `
+          `,
+          // Agregar timeout específico para este email
+          timeout: 30000 // 30 segundos timeout
         });
-        console.log('Email enviado al cliente:', email);
+        console.log('✅ Email enviado al cliente:', email, '- Message ID:', clienteInfo.messageId);
       } catch (emailError) {
-        console.error('Error al enviar email al cliente:', emailError);
+        console.error('❌ Error al enviar email al cliente:', emailError.message);
+        // Continuar con el email del admin aunque falle el del cliente
       }
 
-      // Enviar notificación al administrador
+      // Enviar notificación al administrador (con timeout más corto)
       try {
-        await transporter.sendMail({
+        const adminInfo = await transporter.sendMail({
           from: process.env.EMAIL_FROM,
-          to: process.env.EMAIL_ADMIN || process.env.EMAIL_USER, // Email del admin
+          to: process.env.EMAIL_ADMIN || process.env.EMAIL_USER,
           subject: '🏖️ Nueva Reserva - Casa Vacacional Monterrico',
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -250,11 +267,45 @@ router.post('/', async (req, res) => {
                 Sistema de Reservas Automático
               </p>
             </div>
-          `
+          `,
+          timeout: 30000 // 30 segundos timeout
         });
-        console.log('Email enviado al administrador:', process.env.EMAIL_ADMIN || process.env.EMAIL_USER);
+        console.log('✅ Email enviado al administrador:', process.env.EMAIL_ADMIN || process.env.EMAIL_USER, '- Message ID:', adminInfo.messageId);
       } catch (emailError) {
-        console.error('Error al enviar notificación al administrador:', emailError);
+        console.error('❌ Error al enviar notificación al administrador:', emailError.message);
+        
+        // Si es error de timeout o conexión, intentar envío simple
+        if (emailError.code === 'ETIMEDOUT' || emailError.code === 'ECONNREFUSED') {
+          console.log('🔄 Intentando envío de notificación simplificada...');
+          try {
+            // Email simple sin HTML para reducir tamaño
+            await transporter.sendMail({
+              from: process.env.EMAIL_FROM,
+              to: process.env.EMAIL_ADMIN || process.env.EMAIL_USER,
+              subject: `Nueva Reserva #${resultado.insertId} - ${nombre}`,
+              text: `
+Nueva reserva recibida:
+
+Cliente: ${nombre}
+Email: ${email}
+Teléfono: ${telefono}
+Entrada: ${fecha_entrada}
+Salida: ${fecha_salida}
+Personas: ${num_personas}
+Total: Q${precioFinal.toFixed(2)}
+ID: #${resultado.insertId}
+
+${comentarios ? `Comentarios: ${comentarios}` : ''}
+
+Revisar panel de administración.
+              `,
+              timeout: 15000 // Timeout más corto para email simple
+            });
+            console.log('✅ Email simplificado enviado al administrador');
+          } catch (retryError) {
+            console.error('❌ Error en reintento de email:', retryError.message);
+          }
+        }
       }
     });
   } catch (error) {
