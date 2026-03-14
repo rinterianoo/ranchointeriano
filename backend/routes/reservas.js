@@ -5,23 +5,19 @@ import nodemailer from 'nodemailer';
 
 const router = express.Router();
 
-// Configurar nodemailer con configuración optimizada para Gmail
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT) || 587,
-  secure: false, // true para 465, false para otros puertos
-  requireTLS: true, // Forzar TLS para Gmail
+// Configurar nodemailer con configuración más robusta para Gmail en Render
+const transporter = nodemailer.createTransporter({
+  service: 'gmail', // Usar servicio predefinido de Gmail
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
   },
-  connectionTimeout: 60000, // 60 segundos
-  greetingTimeout: 30000, // 30 segundos
-  socketTimeout: 60000, // 60 segundos
-  tls: {
-    ciphers: 'SSLv3',
-    rejectUnauthorized: false
-  }
+  // Configuración adicional para servidores en la nube
+  pool: true, // Usar pool de conexiones
+  maxConnections: 5,
+  maxMessages: 100,
+  rateDelta: 20000, // 20 segundos entre lotes
+  rateLimit: 5 // máximo 5 emails por rateDelta
 });
 
 // Verificar disponibilidad de fechas
@@ -177,135 +173,82 @@ router.post('/', async (req, res) => {
     // Enviar respuesta ANTES de procesar emails (para evitar timeouts)
     res.status(201).json(reservaResponse);
 
-    // PROCESAR EMAILS EN BACKGROUND (sin hacer fallar la reserva)
+    // PROCESAR EMAILS EN BACKGROUND (reactivado con configuración mejorada)
     setImmediate(async () => {
-      // Verificar configuración de email antes de intentar enviar
+      // Verificar configuración de email
       if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-        console.error('Configuración de email incompleta. Emails deshabilitados.');
+        console.error('⚠️ Configuración de email incompleta.');
         return;
       }
 
-      // Enviar email de confirmación al cliente
+      console.log('📧 Iniciando envío de emails para reserva #' + resultado.insertId);
+
+      // Enviar email simple al administrador PRIMERO (más importante)
       try {
-        const clienteInfo = await transporter.sendMail({
-          from: process.env.EMAIL_FROM,
-          to: email,
-          subject: 'Solicitud de Reserva - Casa Vacacional Monterrico',
-          html: `
-            <h2>Solicitud de Reserva Recibida</h2>
-            <p>Hola ${nombre},</p>
-            <p>Hemos recibido tu solicitud de reserva con los siguientes detalles:</p>
-            <ul>
-              <li><strong>Fecha de entrada:</strong> ${fecha_entrada}</li>
-              <li><strong>Fecha de salida:</strong> ${fecha_salida}</li>
-              <li><strong>Número de personas:</strong> ${num_personas}</li>
-              <li><strong>Número de noches:</strong> ${noches}</li>
-              <li><strong>Precio total:</strong> Q${precioFinal.toFixed(2)}</li>
-            </ul>
-            <p>Te contactaremos pronto para confirmar tu reserva.</p>
-            <p>Gracias por elegir Casa Vacacional Monterrico.</p>
-          `,
-          // Agregar timeout específico para este email
-          timeout: 30000 // 30 segundos timeout
-        });
-        console.log('✅ Email enviado al cliente:', email, '- Message ID:', clienteInfo.messageId);
-      } catch (emailError) {
-        console.error('❌ Error al enviar email al cliente:', emailError.message);
-        // Continuar con el email del admin aunque falle el del cliente
-      }
-
-      // Enviar notificación al administrador (con timeout más corto)
-      try {
-        const adminInfo = await transporter.sendMail({
-          from: process.env.EMAIL_FROM,
-          to: process.env.EMAIL_ADMIN || process.env.EMAIL_USER,
-          subject: '🏖️ Nueva Reserva - Casa Vacacional Monterrico',
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #2563eb; border-bottom: 3px solid #2563eb; padding-bottom: 10px;">
-                🏖️ ¡Nueva Reserva Recibida!
-              </h2>
-              
-              <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <h3 style="color: #1e40af; margin-top: 0;">Detalles del Cliente:</h3>
-                <ul style="list-style: none; padding: 0;">
-                  <li style="margin: 8px 0;"><strong>👤 Nombre:</strong> ${nombre}</li>
-                  <li style="margin: 8px 0;"><strong>📧 Email:</strong> ${email}</li>
-                  <li style="margin: 8px 0;"><strong>📱 Teléfono:</strong> ${telefono}</li>
-                </ul>
-              </div>
-
-              <div style="background-color: #ecfdf5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <h3 style="color: #059669; margin-top: 0;">Detalles de la Reserva:</h3>
-                <ul style="list-style: none; padding: 0;">
-                  <li style="margin: 8px 0;"><strong>📅 Entrada:</strong> ${fecha_entrada}</li>
-                  <li style="margin: 8px 0;"><strong>📅 Salida:</strong> ${fecha_salida}</li>
-                  <li style="margin: 8px 0;"><strong>👥 Personas:</strong> ${num_personas}</li>
-                  <li style="margin: 8px 0;"><strong>🌙 Noches:</strong> ${noches}</li>
-                  <li style="margin: 8px 0;"><strong>💰 Total:</strong> Q${precioFinal.toFixed(2)}</li>
-                  <li style="margin: 8px 0;"><strong>📋 ID Reserva:</strong> #${resultado.insertId}</li>
-                </ul>
-              </div>
-
-              ${comentarios ? `
-              <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <h3 style="color: #d97706; margin-top: 0;">💬 Comentarios del Cliente:</h3>
-                <p style="margin: 0; font-style: italic;">${comentarios}</p>
-              </div>
-              ` : ''}
-
-              <div style="background-color: #fee2e2; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
-                <h3 style="color: #dc2626; margin-top: 0;">⚠️ Acción Requerida</h3>
-                <p style="margin: 10px 0;">Esta reserva está pendiente de confirmación.</p>
-                <p style="margin: 0;"><strong>Por favor, revisa el panel de administración para confirmar o rechazar.</strong></p>
-              </div>
-
-              <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
-              
-              <p style="text-align: center; color: #6b7280; font-size: 14px;">
-                Casa Vacacional Monterrico<br>
-                Sistema de Reservas Automático
-              </p>
-            </div>
-          `,
-          timeout: 30000 // 30 segundos timeout
-        });
-        console.log('✅ Email enviado al administrador:', process.env.EMAIL_ADMIN || process.env.EMAIL_USER, '- Message ID:', adminInfo.messageId);
-      } catch (emailError) {
-        console.error('❌ Error al enviar notificación al administrador:', emailError.message);
-        
-        // Si es error de timeout o conexión, intentar envío simple
-        if (emailError.code === 'ETIMEDOUT' || emailError.code === 'ECONNREFUSED') {
-          console.log('🔄 Intentando envío de notificación simplificada...');
-          try {
-            // Email simple sin HTML para reducir tamaño
-            await transporter.sendMail({
-              from: process.env.EMAIL_FROM,
-              to: process.env.EMAIL_ADMIN || process.env.EMAIL_USER,
-              subject: `Nueva Reserva #${resultado.insertId} - ${nombre}`,
-              text: `
-Nueva reserva recibida:
+        const adminEmail = await transporter.sendMail({
+          from: `"Casa Vacacional Monterrico" <${process.env.EMAIL_USER}>`,
+          to: process.env.EMAIL_USER, // Enviar al mismo email configurado
+          subject: `🏖️ Nueva Reserva #${resultado.insertId} - ${nombre}`,
+          text: `
+NUEVA RESERVA RECIBIDA
 
 Cliente: ${nombre}
 Email: ${email}
 Teléfono: ${telefono}
-Entrada: ${fecha_entrada}
-Salida: ${fecha_salida}
+
+Fechas: ${fecha_entrada} a ${fecha_salida}
 Personas: ${num_personas}
+Noches: ${noches}
 Total: Q${precioFinal.toFixed(2)}
-ID: #${resultado.insertId}
 
-${comentarios ? `Comentarios: ${comentarios}` : ''}
+${comentarios ? `Comentarios: ${comentarios}` : 'Sin comentarios adicionales'}
 
-Revisar panel de administración.
-              `,
-              timeout: 15000 // Timeout más corto para email simple
-            });
-            console.log('✅ Email simplificado enviado al administrador');
-          } catch (retryError) {
-            console.error('❌ Error en reintento de email:', retryError.message);
-          }
-        }
+ID Reserva: #${resultado.insertId}
+Estado: Pendiente
+
+Revisar panel de administración para confirmar.
+
+---
+Casa Vacacional Monterrico
+Sistema de Reservas
+          `.trim()
+        });
+        console.log('✅ Email admin enviado - ID:', adminEmail.messageId);
+      } catch (emailError) {
+        console.error('❌ Error email admin:', emailError.message);
+      }
+
+      // Esperar 2 segundos antes del siguiente email
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Enviar email al cliente (secundario)
+      try {
+        const clienteEmail = await transporter.sendMail({
+          from: `"Casa Vacacional Monterrico" <${process.env.EMAIL_USER}>`,
+          to: email,
+          subject: 'Solicitud de Reserva Recibida - Casa Vacacional Monterrico',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px;">
+              <h2 style="color: #2563eb;">Solicitud de Reserva Recibida</h2>
+              <p>Hola <strong>${nombre}</strong>,</p>
+              <p>Hemos recibido tu solicitud de reserva:</p>
+              
+              <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                <p><strong>📅 Entrada:</strong> ${fecha_entrada}</p>
+                <p><strong>📅 Salida:</strong> ${fecha_salida}</p>
+                <p><strong>👥 Personas:</strong> ${num_personas}</p>
+                <p><strong>🌙 Noches:</strong> ${noches}</p>
+                <p><strong>💰 Total:</strong> Q${precioFinal.toFixed(2)}</p>
+              </div>
+              
+              <p>Te contactaremos pronto para confirmar tu reserva.</p>
+              <p>¡Gracias por elegir Casa Vacacional Monterrico!</p>
+            </div>
+          `
+        });
+        console.log('✅ Email cliente enviado - ID:', clienteEmail.messageId);
+      } catch (emailError) {
+        console.error('❌ Error email cliente:', emailError.message);
       }
     });
   } catch (error) {
