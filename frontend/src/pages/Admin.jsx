@@ -238,9 +238,14 @@ const Admin = () => {
 
   // Toggle bloquear noche
   const toggleBloquearNoche = (fecha) => {
-    setNochesBloquedas({
-      ...nochesBloquedas,
-      [fecha]: !nochesBloquedas[fecha]
+    setNochesBloquedas((prev) => {
+      const estadoGuardado = preciosCalendario[fecha]?.estado === 'bloqueada';
+      const estadoActual = prev[fecha] !== undefined ? prev[fecha] : estadoGuardado;
+
+      return {
+        ...prev,
+        [fecha]: !estadoActual
+      };
     });
   };
 
@@ -349,6 +354,10 @@ const Admin = () => {
                 if (!dia) return <div key={`empty-${index}`}></div>;
 
                 const fecha = `${año}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+                const hoy = new Date();
+                hoy.setHours(0, 0, 0, 0);
+                const fechaDia = parsearFechaLocal(fecha);
+                const esPasada = fechaDia < hoy;
                 
                 // Obtener datos
                 const datosGuardados = preciosCalendario[fecha];
@@ -391,10 +400,12 @@ const Admin = () => {
                 return (
                   <button
                     key={dia}
-                    onClick={() => tieneReserva ? null : setFechaSeleccionada(fecha)}
-                    disabled={tieneReserva}
+                    onClick={() => (tieneReserva || esPasada) ? null : setFechaSeleccionada(fecha)}
+                    disabled={tieneReserva || esPasada}
                     className={`aspect-square p-1 sm:p-2 lg:p-3 rounded border-2 transition-all text-center flex flex-col items-center justify-center gap-0.5 sm:gap-1 font-semibold ${
-                      isSelected
+                      esPasada
+                        ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : isSelected
                         ? 'border-primary-600 bg-primary-50 shadow-md'
                         : estaBloqueda
                         ? 'border-red-300 bg-red-50 hover:border-red-500'
