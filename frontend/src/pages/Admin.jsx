@@ -420,9 +420,6 @@ const Admin = () => {
                     <div className="text-xs lg:text-sm text-gray-700 leading-none font-semibold">
                       Q{Number(precioNoche).toLocaleString('es-GT')}
                     </div>
-                    {estaBloqueda && !tieneReserva && (
-                      <div className="text-red-600 text-xs leading-none font-bold">BLOQUEADA</div>
-                    )}
                     {hasChanges && !tieneReserva && !estaBloqueda && <div className="text-yellow-500 text-xs leading-none">●</div>}
                   </button>
                 );
