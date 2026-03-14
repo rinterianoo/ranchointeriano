@@ -1,9 +1,45 @@
 import { useState, useEffect } from 'react';
+import { preciosService } from '../services/services';
 
 const Calendar = ({ fechasOcupadas, onSelectDates, propiedadId }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedStart, setSelectedStart] = useState(null);
   const [selectedEnd, setSelectedEnd] = useState(null);
+  const [fechasBloqueadas, setFechasBloqueadas] = useState({});
+
+  const formatLocalDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const parseLocalDate = (dateString) => {
+    const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  useEffect(() => {
+    const cargarFechasBloqueadas = async () => {
+      if (!propiedadId) return;
+
+      try {
+        const data = await preciosService.obtenerBloqueadas(propiedadId);
+        const bloqueadasMap = {};
+
+        (data.bloqueadas || []).forEach((item) => {
+          const fecha = item.fecha.split('T')[0];
+          bloqueadasMap[fecha] = true;
+        });
+
+        setFechasBloqueadas(bloqueadasMap);
+      } catch (error) {
+        setFechasBloqueadas({});
+      }
+    };
+
+    cargarFechasBloqueadas();
+  }, [propiedadId]);
 
   const getDaysInMonth = (date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -14,10 +50,16 @@ const Calendar = ({ fechasOcupadas, onSelectDates, propiedadId }) => {
   };
 
   const isFechaOcupada = (fecha) => {
+    const fechaCheck = new Date(fecha);
+    const fechaCheckStr = formatLocalDate(fechaCheck);
+
+    if (fechasBloqueadas[fechaCheckStr]) {
+      return true;
+    }
+
     return fechasOcupadas.some(reserva => {
-      const entrada = new Date(reserva.fecha_entrada);
-      const salida = new Date(reserva.fecha_salida);
-      const fechaCheck = new Date(fecha);
+      const entrada = parseLocalDate(reserva.fecha_entrada);
+      const salida = parseLocalDate(reserva.fecha_salida);
       return fechaCheck >= entrada && fechaCheck < salida;
     });
   };
@@ -47,8 +89,8 @@ const Calendar = ({ fechasOcupadas, onSelectDates, propiedadId }) => {
       if (clickedDate > selectedStart) {
         setSelectedEnd(clickedDate);
         onSelectDates(
-          selectedStart.toISOString().split('T')[0],
-          clickedDate.toISOString().split('T')[0]
+          formatLocalDate(selectedStart),
+          formatLocalDate(clickedDate)
         );
       } else {
         setSelectedStart(clickedDate);
