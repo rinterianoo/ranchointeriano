@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import config from '../config';
 
 const ReviewForm = ({ propiedadId = 1, onReviewSubmitted }) => {
   const [formData, setFormData] = useState({
@@ -78,8 +79,7 @@ const ReviewForm = ({ propiedadId = 1, onReviewSubmitted }) => {
         form.append('imagen', imagen);
       }
 
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-      const response = await fetch(`${API_URL}/resenas`, {
+      const response = await fetch(`${config.API_URL}/resenas`, {
         method: 'POST',
         body: form
       });

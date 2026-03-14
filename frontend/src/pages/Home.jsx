@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import config from '../config';
 
 const Home = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -12,8 +13,7 @@ const Home = () => {
   useEffect(() => {
     const cargarResenas = async () => {
       try {
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-        const response = await fetch(`${API_URL}/resenas/propiedad/${propiedadId}`);
+        const response = await fetch(`${config.API_URL}/resenas/propiedad/${propiedadId}`);
         const data = await response.json();
         if (response.ok) {
           setReviews(data.resenas || []);
