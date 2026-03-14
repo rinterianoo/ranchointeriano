@@ -1,6 +1,5 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
-
 dotenv.config();
 
 const pool = mysql.createPool({
@@ -8,20 +7,23 @@ const pool = mysql.createPool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
+  port: process.env.DB_PORT || 4000,
+  ssl: {
+    minVersion: 'TLSv1.2',
+    rejectUnauthorized: true
+  },
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
 });
 
-// Verificar la conexión
 const verificarConexion = async () => {
   try {
     const connection = await pool.getConnection();
-    console.log('✅ Conexión exitosa a la base de datos MySQL');
+    console.log('✅ Conexión exitosa a TiDB Cloud');
     connection.release();
   } catch (error) {
-    console.error('❌ Error al conectar con la base de datos:', error.message);
+    console.error('❌ Error al conectar:', error.message);
   }
 };
 
