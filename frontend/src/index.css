@@ -33,3 +33,81 @@ code {
 .animate-fadeIn {
   animation: fadeIn 0.5s ease-out;
 }
+
+@keyframes fadeUpSoft {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleInSoft {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slowZoom {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.04);
+  }
+}
+
+.animate-fade-up-soft {
+  animation: fadeUpSoft 0.7s ease-out both;
+}
+
+.animate-fade-up-soft-delay-1 {
+  animation: fadeUpSoft 0.8s ease-out 0.12s both;
+}
+
+.animate-fade-up-soft-delay-2 {
+  animation: fadeUpSoft 0.9s ease-out 0.22s both;
+}
+
+.animate-scale-in-soft {
+  animation: scaleInSoft 0.55s ease-out both;
+}
+
+.animate-slow-zoom {
+  animation: slowZoom 8s ease-out both;
+}
+
+.card-lift-soft {
+  transition: transform 260ms ease, box-shadow 260ms ease;
+}
+
+.card-lift-soft:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fadeIn,
+  .animate-fade-up-soft,
+  .animate-fade-up-soft-delay-1,
+  .animate-fade-up-soft-delay-2,
+  .animate-scale-in-soft,
+  .animate-slow-zoom {
+    animation: none !important;
+  }
+
+  .card-lift-soft,
+  .card-lift-soft:hover {
+    transition: none !important;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+}

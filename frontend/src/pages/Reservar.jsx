@@ -266,16 +266,16 @@ const Reservar = () => {
         </div>
       )}
 
-      <div className="min-h-screen bg-gray-50 py-6 md:py-12 pt-28 md:pt-32">
+      <div className="min-h-screen bg-gray-50 py-6 md:py-12 pt-28 md:pt-32 animate-fade-up-soft">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6 md:mb-8 text-center">
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6 md:mb-8 text-center animate-fade-up-soft-delay-1">
           <i className="fas fa-calendar-check text-primary-600 mr-3"></i>
           Reservar Rancho Interiano
         </h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
           {/* Información de la propiedad */}
-          <div id="formulario-reserva" ref={formularioRef} className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+          <div id="formulario-reserva" ref={formularioRef} className="bg-white rounded-lg shadow-lg p-4 md:p-6 animate-scale-in-soft card-lift-soft">
             <h2 className="text-xl md:text-2xl font-bold mb-4">Rancho Interiano - Paraíso en la Playa</h2>
             
             {/* Carrusel de imágenes */}
@@ -320,7 +320,7 @@ const Reservar = () => {
           </div>
 
           {/* Formulario de reserva */}
-          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 animate-scale-in-soft card-lift-soft">
             <h2 className="text-xl md:text-2xl font-bold mb-6">Detalles de la Reserva</h2>
             
             {error && (
@@ -424,7 +424,7 @@ const Reservar = () => {
               </div>
 
               {numNoches > 0 && (
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2 animate-fade-up-soft">
                   <div className="flex justify-between text-gray-700">
                     <span>Número de noches:</span>
                     <span className="font-semibold">{numNoches}</span>

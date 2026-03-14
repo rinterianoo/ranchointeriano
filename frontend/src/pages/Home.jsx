@@ -86,7 +86,7 @@ const Home = () => {
             <img 
               src={image} 
               alt={`Monterrico ${index + 1}`}
-              className="w-full h-full object-cover"
+              className={`w-full h-full object-cover ${index === currentSlide ? 'animate-slow-zoom' : ''}`}
             />
           </div>
         ))}
@@ -94,16 +94,16 @@ const Home = () => {
         {/* Overlay con información */}
         <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center">
           <div className="text-white p-4 sm:p-8 text-center">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-center">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-center animate-fade-up-soft">
               Rancho Interiano
             </h1>
-            <p className="text-sm sm:text-base md:text-lg text-center mb-6 sm:mb-8 max-w-2xl">
+            <p className="text-sm sm:text-base md:text-lg text-center mb-6 sm:mb-8 max-w-2xl animate-fade-up-soft-delay-1">
               Casa vacacional en Monterrico con piscina privada, aire acondicionado y todas las comodidades para unas vacaciones perfectas.
             </p>
             <div className="flex justify-center">
               <Link
                 to="/reservar#formulario-reserva"
-                className="inline-block bg-white text-primary-600 px-6 sm:px-12 py-3 sm:py-5 rounded-lg text-base sm:text-2xl font-bold hover:bg-gray-100 transition-colors shadow-lg z-10 relative"
+                className="inline-block bg-white text-primary-600 px-6 sm:px-12 py-3 sm:py-5 rounded-lg text-base sm:text-2xl font-bold hover:bg-gray-100 transition-colors shadow-lg z-10 relative animate-fade-up-soft-delay-2"
               >
                 <i className="fas fa-calendar-check mr-2"></i>
                 Reservar Ahora
@@ -127,7 +127,7 @@ const Home = () => {
       </div>
 
       {/* Descripción Principal */}
-      <div className="py-8 sm:py-12 md:py-16 bg-white">
+      <div className="py-8 sm:py-12 md:py-16 bg-white animate-fade-up-soft">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8 sm:mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-4">
@@ -145,15 +145,15 @@ const Home = () => {
           </p>
 
           <div className="grid grid-cols-3 md:grid-cols-3 gap-4 sm:gap-6 text-center">
-            <div className="p-4 sm:p-6 bg-gray-50 rounded-lg">
+            <div className="p-4 sm:p-6 bg-gray-50 rounded-lg card-lift-soft">
               <p className="text-2xl sm:text-3xl font-bold text-primary-600">2</p>
               <p className="text-sm sm:text-base text-gray-600">Habitaciones</p>
             </div>
-            <div className="p-4 sm:p-6 bg-gray-50 rounded-lg">
+            <div className="p-4 sm:p-6 bg-gray-50 rounded-lg card-lift-soft">
               <p className="text-2xl sm:text-3xl font-bold text-primary-600">2</p>
               <p className="text-sm sm:text-base text-gray-600">Baños</p>
             </div>
-            <div className="p-4 sm:p-6 bg-gray-50 rounded-lg">
+            <div className="p-4 sm:p-6 bg-gray-50 rounded-lg card-lift-soft">
               <p className="text-2xl sm:text-3xl font-bold text-primary-600">10</p>
               <p className="text-sm sm:text-base text-gray-600">Huéspedes</p>
             </div>
@@ -162,13 +162,13 @@ const Home = () => {
       </div>
 
       {/* Características Principales */}
-      <div className="py-8 sm:py-12 md:py-16 bg-gray-50">
+      <div className="py-8 sm:py-12 md:py-16 bg-gray-50 animate-fade-up-soft">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12 text-gray-800">
             ¿Por qué elegir Rancho Interiano?
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 md:gap-8">
-            <div className="bg-white p-5 sm:p-6 md:p-8 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105 text-center">
+            <div className="bg-white p-5 sm:p-6 md:p-8 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105 text-center card-lift-soft">
               <div className="text-primary-600 text-4xl sm:text-5xl md:text-6xl mb-4 sm:mb-5">
                 <i className="fas fa-snowflake"></i>
               </div>
@@ -177,7 +177,7 @@ const Home = () => {
                 Automático disponible para tu comodidad.
               </p>
             </div>
-            <div className="bg-white p-5 sm:p-6 md:p-8 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105 text-center">
+            <div className="bg-white p-5 sm:p-6 md:p-8 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105 text-center card-lift-soft">
               <div className="text-primary-600 text-4xl sm:text-5xl md:text-6xl mb-4 sm:mb-5">
                 <i className="fas fa-swimming-pool"></i>
               </div>
@@ -186,7 +186,7 @@ const Home = () => {
                 Hermosa piscina con área de descanso.
               </p>
             </div>
-            <div className="bg-white p-5 sm:p-6 md:p-8 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105 text-center">
+            <div className="bg-white p-5 sm:p-6 md:p-8 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105 text-center card-lift-soft">
               <div className="text-primary-600 text-4xl sm:text-5xl md:text-6xl mb-4 sm:mb-5">
                 <i className="fas fa-bed"></i>
               </div>
@@ -256,7 +256,7 @@ const Home = () => {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
             {amenidades.map((amenidad, index) => (
-              <div key={index} className="flex items-start p-4 sm:p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-all">
+              <div key={index} className="flex items-start p-4 sm:p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-all card-lift-soft animate-fade-up-soft">
                 <i className={`${amenidad.icon} text-primary-600 text-xl sm:text-2xl mr-4 mt-1 flex-shrink-0`}></i>
                 <div className="flex-1">
                   <h3 className="text-sm sm:text-base font-bold text-gray-800">{amenidad.label}</h3>
@@ -315,7 +315,7 @@ const Home = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {reviews.map((review) => (
-                <div key={review.id} className="bg-white p-4 sm:p-6 rounded-lg shadow-sm hover:shadow-md transition-all">
+                <div key={review.id} className="bg-white p-4 sm:p-6 rounded-lg shadow-sm hover:shadow-md transition-all card-lift-soft animate-fade-up-soft">
                   {review.imagen && (
                     <img 
                       src={review.imagen} 
@@ -422,7 +422,7 @@ const Home = () => {
       </div>
 
       {/* CTA Final */}
-      <div className="py-8 sm:py-12 md:py-16 bg-primary-600">
+      <div className="py-8 sm:py-12 md:py-16 bg-primary-600 animate-fade-up-soft">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 sm:mb-4">
             ¿Listo para tus vacaciones?
