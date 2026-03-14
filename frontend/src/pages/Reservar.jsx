@@ -180,7 +180,12 @@ const Reservar = () => {
         precio_total: precioTotal  // Enviar precio calculado con precios dinámicos
       };
 
-      await reservasService.crear(datosReserva);
+      console.log('Enviando reserva...', datosReserva);
+      
+      const response = await reservasService.crear(datosReserva);
+      
+      console.log('Reserva creada exitosamente:', response);
+      
       setExito('¡Reserva creada exitosamente! Te contactaremos pronto.');
       
       // Limpiar formulario
@@ -196,7 +201,16 @@ const Reservar = () => {
       setPrecioTotal(0);
       setNumNoches(0);
     } catch (err) {
-      setError(err.response?.data?.mensaje || 'Error al crear reserva');
+      console.error('Error al crear reserva:', err);
+      
+      // Manejo más detallado de errores
+      if (err.code === 'NETWORK_ERROR' || err.message?.includes('Network Error')) {
+        setError('Error de conexión. Tu reserva podría haberse creado. Por favor, llámanos para confirmar.');
+      } else if (err.response?.status >= 500) {
+        setError('Error del servidor. Tu reserva podría haberse creado. Te contactaremos si se procesó correctamente.');
+      } else {
+        setError(err.response?.data?.mensaje || err.message || 'Error al crear reserva');
+      }
     } finally {
       setCargando(false);
     }

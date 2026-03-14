@@ -99,6 +99,6 @@ VALUES (
     'Monterrico, Santa Rosa, Guatemala',
     1500.00,
     8,
-    3,
+    2,
     2
 );

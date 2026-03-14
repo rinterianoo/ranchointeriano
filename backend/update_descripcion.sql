@@ -3,9 +3,9 @@ nombre = 'Casa Vacacional Monterrico - Paraíso en la Playa',
 descripcion = 'Hermosa casa vacacional en Monterrico con todas las comodidades para una estadía inolvidable.
 
 HABITACIONES Y ESPACIOS:
-• 3 habitaciones amplias y confortables
+• 2 habitaciones amplias y confortables
 • Habitación principal con aire acondicionado
-• 2 habitaciones secundarias espaciosas
+• 1 habitación secundaria espaciosa
 • Capacidad para 8-10 personas
 • Sala, comedor y cocina en concepto abierto
 • Áreas verdes y jardín amplio
