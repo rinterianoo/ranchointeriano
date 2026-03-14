@@ -22,6 +22,10 @@ const Admin = () => {
   const [guardandoPrecios, setGuardandoPrecios] = useState(false);
   const [preciosCalendario, setPreciosCalendario] = useState({});
   const [cargandoCalendario, setCargandoCalendario] = useState(false);
+  
+  // Estados para alertas de reservas
+  const [mensajeReserva, setMensajeReserva] = useState('');
+  const [errorReserva, setErrorReserva] = useState('');
 
   // Contexto de autenticación
   const { usuario, logout } = useContext(AuthContext);
@@ -89,10 +93,37 @@ const Admin = () => {
 
   const cambiarEstado = async (id, nuevoEstado) => {
     try {
+      setErrorReserva('');
+      setMensajeReserva('');
+      
       await reservasService.actualizarEstado(id, nuevoEstado);
+      
+      // Mostrar mensaje de éxito según el estado
+      let mensaje = '';
+      if (nuevoEstado === 'confirmada') {
+        mensaje = '✅ Reserva confirmada exitosamente';
+      } else if (nuevoEstado === 'cancelada') {
+        mensaje = '❌ Reserva cancelada exitosamente';
+      } else if (nuevoEstado === 'completada') {
+        mensaje = '🏁 Reserva marcada como completada';
+      }
+      
+      setMensajeReserva(mensaje);
+      
+      // Limpiar mensaje después de 4 segundos
+      setTimeout(() => {
+        setMensajeReserva('');
+      }, 4000);
+      
       cargarReservas();
     } catch (err) {
-      alert(err.response?.data?.mensaje || 'Error al actualizar estado');
+      const errorMsg = err.response?.data?.mensaje || 'Error al actualizar estado de la reserva';
+      setErrorReserva(errorMsg);
+      
+      // Limpiar error después de 5 segundos
+      setTimeout(() => {
+        setErrorReserva('');
+      }, 5000);
     }
   };
 
@@ -167,6 +198,7 @@ const Admin = () => {
   // Filtrar reservas por tipo
   const reservasPendientes = reservas.filter(r => r.estado === 'pendiente');
   const reservasConfirmadas = reservas.filter(r => r.estado === 'confirmada' || r.estado === 'completada');
+  const reservasPendientes = reservas.filter(r => r.estado === 'pendiente');
   const reservasHistorial = reservas.filter(r => r.estado !== 'pendiente');
   const reservasAMostrar = verHistorial ? reservasHistorial : reservasPendientes;
 
@@ -284,7 +316,7 @@ const Admin = () => {
           {/* Calendario */}
           <div className="flex-1">
             {/* Leyenda */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-6 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4 sm:mb-6 text-xs">
               <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
                 <div className="w-3 h-3 bg-green-500 rounded flex-shrink-0"></div>
                 <span>Disponible</span>
@@ -293,9 +325,17 @@ const Admin = () => {
                 <div className="w-3 h-3 bg-red-500 rounded flex-shrink-0"></div>
                 <span>Bloqueada</span>
               </div>
-              <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
-                <div className="w-3 h-3 bg-blue-500 rounded flex-shrink-0"></div>
-                <span>Reservada</span>
+              <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg">
+                <div className="w-3 h-3 bg-yellow-500 rounded flex-shrink-0"></div>
+                <span>Pendiente</span>
+              </div>
+              <div className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg">
+                <div className="w-3 h-3 bg-orange-500 rounded flex-shrink-0"></div>
+                <span>Confirmada</span>
+              </div>
+              <div className="flex items-center gap-2 p-2 bg-primary-50 rounded-lg">
+                <div className="w-3 h-3 bg-primary-500 rounded flex-shrink-0"></div>
+                <span>Seleccionada</span>
               </div>
             </div>
 
@@ -335,12 +375,21 @@ const Admin = () => {
                   estaBloqueda = false;
                 }
                 
-                const tieneReserva = reservasConfirmadas.some(r => {
+                const tieneReservaConfirmada = reservasConfirmadas.some(r => {
                   const entrada = new Date(r.fecha_entrada);
                   const salida = new Date(r.fecha_salida);
                   const diaFecha = new Date(fecha);
                   return diaFecha >= entrada && diaFecha < salida;
                 });
+
+                const tieneReservaPendiente = reservasPendientes.some(r => {
+                  const entrada = new Date(r.fecha_entrada);
+                  const salida = new Date(r.fecha_salida);
+                  const diaFecha = new Date(fecha);
+                  return diaFecha >= entrada && diaFecha < salida;
+                });
+
+                const tieneReserva = tieneReservaConfirmada || tieneReservaPendiente;
 
                 const isSelected = fechaSeleccionada === fecha;
                 const hasChanges = precioLocal !== undefined;
@@ -348,14 +397,17 @@ const Admin = () => {
                 return (
                   <button
                     key={dia}
-                    onClick={() => setFechaSeleccionada(fecha)}
+                    onClick={() => tieneReserva ? null : setFechaSeleccionada(fecha)}
+                    disabled={tieneReserva}
                     className={`aspect-square p-1 sm:p-2 lg:p-3 rounded border-2 transition-all text-center flex flex-col items-center justify-center gap-0.5 sm:gap-1 font-semibold ${
                       isSelected
                         ? 'border-primary-600 bg-primary-50 shadow-md'
                         : estaBloqueda
                         ? 'border-red-300 bg-red-50 hover:border-red-500'
-                        : tieneReserva
-                        ? 'border-blue-300 bg-blue-50 hover:border-blue-500'
+                        : tieneReservaConfirmada
+                        ? 'border-orange-400 bg-orange-100 cursor-not-allowed opacity-90'
+                        : tieneReservaPendiente
+                        ? 'border-yellow-400 bg-yellow-100 cursor-not-allowed opacity-90'
                         : 'border-green-300 bg-green-50 hover:border-green-500'
                     }`}
                   >
@@ -363,7 +415,16 @@ const Admin = () => {
                     <div className="text-xs lg:text-sm text-gray-700 leading-none font-semibold">
                       Q{Number(precioNoche).toLocaleString('es-GT')}
                     </div>
-                    {hasChanges && <div className="text-yellow-500 text-xs leading-none">●</div>}
+                    {tieneReservaConfirmada && (
+                      <div className="text-orange-700 text-xs leading-none font-bold">CONFIRMADA</div>
+                    )}
+                    {tieneReservaPendiente && (
+                      <div className="text-yellow-700 text-xs leading-none font-bold">PENDIENTE</div>
+                    )}
+                    {estaBloqueda && !tieneReserva && (
+                      <div className="text-red-600 text-xs leading-none font-bold">BLOQUEADA</div>
+                    )}
+                    {hasChanges && !tieneReserva && !estaBloqueda && <div className="text-yellow-500 text-xs leading-none">●</div>}
                   </button>
                 );
               })}
@@ -559,6 +620,21 @@ const Admin = () => {
             {/* VISTA: RESERVACIONES */}
             {vista === 'reservaciones' && (
               <div className="space-y-4 sm:space-y-6">
+                {/* Alertas de reservas */}
+                {mensajeReserva && (
+                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+                    <i className="fas fa-check-circle mr-2"></i>
+                    {mensajeReserva}
+                  </div>
+                )}
+                
+                {errorReserva && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                    <i className="fas fa-exclamation-circle mr-2"></i>
+                    {errorReserva}
+                  </div>
+                )}
+                
                 {/* Próximas Reservaciones - Estilo Airbnb */}
                 <div>
                   <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-2">
