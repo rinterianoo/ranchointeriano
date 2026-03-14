@@ -30,6 +30,18 @@ const Admin = () => {
   const { usuario, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  const formatearFechaLocal = (fecha) => {
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const parsearFechaLocal = (fechaStr) => {
+    const [year, month, day] = fechaStr.split('T')[0].split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
   useEffect(() => {
     cargarReservas();
   }, []);
@@ -59,8 +71,8 @@ const Admin = () => {
       const mes = fechaCalendario.getMonth();
       
       // Obtener primer y último día del mes
-      const primerDia = new Date(año, mes, 1).toISOString().split('T')[0];
-      const ultimoDia = new Date(año, mes + 1, 0).toISOString().split('T')[0];
+      const primerDia = formatearFechaLocal(new Date(año, mes, 1));
+      const ultimoDia = formatearFechaLocal(new Date(año, mes + 1, 0));
       
 
       // Cargar precios dinámicos para el mes
@@ -358,16 +370,16 @@ const Admin = () => {
                 }
                 
                 const tieneReservaConfirmada = reservasConfirmadas.some(r => {
-                  const entrada = new Date(r.fecha_entrada);
-                  const salida = new Date(r.fecha_salida);
-                  const diaFecha = new Date(fecha);
+                  const entrada = parsearFechaLocal(r.fecha_entrada);
+                  const salida = parsearFechaLocal(r.fecha_salida);
+                  const diaFecha = parsearFechaLocal(fecha);
                   return diaFecha >= entrada && diaFecha < salida;
                 });
 
                 const tieneReservaPendiente = todasReservasPendientes.some(r => {
-                  const entrada = new Date(r.fecha_entrada);
-                  const salida = new Date(r.fecha_salida);
-                  const diaFecha = new Date(fecha);
+                  const entrada = parsearFechaLocal(r.fecha_entrada);
+                  const salida = parsearFechaLocal(r.fecha_salida);
+                  const diaFecha = parsearFechaLocal(fecha);
                   return diaFecha >= entrada && diaFecha < salida;
                 });
 
@@ -434,7 +446,7 @@ const Admin = () => {
                 <div className="mb-6 text-center">
                   <p className="text-xs text-gray-400 mb-1 font-semibold uppercase">Fecha seleccionada</p>
                   <p className="text-2xl sm:text-3xl font-bold">
-                    {new Date(fechaSeleccionada).toLocaleDateString('es-ES', { 
+                    {parsearFechaLocal(fechaSeleccionada).toLocaleDateString('es-ES', { 
                       weekday: 'short', 
                       day: 'numeric', 
                       month: 'short' 
@@ -449,7 +461,11 @@ const Admin = () => {
                     <input
                       type="number"
                       value={precioFechaSeleccionada}
-                      onChange={(e) => cambiarPrecioNoche(fechaSeleccionada, parseInt(e.target.value) || precioBase)}
+                      min="0"
+                      onChange={(e) => {
+                        const valor = Number(e.target.value);
+                        cambiarPrecioNoche(fechaSeleccionada, Number.isNaN(valor) ? 0 : valor);
+                      }}
                       className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-3 sm:py-2 text-white font-bold text-base sm:text-sm focus:outline-none focus:border-primary-600"
                       placeholder="Precio"
                     />

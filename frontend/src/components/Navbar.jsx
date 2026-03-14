@@ -18,6 +18,9 @@ const Navbar = () => {
       setScrolled(currentScrollY > 50);
     };
 
+    // Sincronizar estado inicial al cargar la página
+    handleScroll();
+
     // Solo agregar el listener si no es ruta de admin
     if (!isAdminRoute) {
       window.addEventListener('scroll', handleScroll, { passive: true });
@@ -37,8 +40,10 @@ const Navbar = () => {
       className={`${
         isAdminRoute
           ? 'hidden' // Ocultar navbar completamente en rutas de admin
-          : `fixed top-0 left-4 right-4 backdrop-blur-md bg-white/85 border border-white/30 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.15)] hover:bg-white/90 transform transition-all duration-500 ${
-              scrolled ? 'translate-y-4 mt-4' : 'translate-y-0 mt-4'
+          : `fixed top-0 left-4 right-4 backdrop-blur-md border border-white/30 hover:shadow-[0_20px_40px_rgb(0,0,0,0.15)] transform transition-all duration-500 ${
+              scrolled
+                ? 'bg-white/95 shadow-[0_10px_30px_rgb(0,0,0,0.14)]'
+                : 'bg-white/88 shadow-[0_8px_24px_rgb(0,0,0,0.1)]'
             }`
       } rounded-2xl z-50 hover:-translate-y-1 hover:scale-[1.01]`}
     >
