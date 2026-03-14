@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Favicon Rancho Interiano">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8ed3ff"/>
+      <stop offset="1" stop-color="#d8f2ff"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="10" fill="url(#sky)"/>
+  <path d="M0 44C10 40 18 46 28 44C38 42 44 36 64 40V64H0Z" fill="#0ea5e9"/>
+  <path d="M0 50C12 46 20 52 30 50C40 48 48 42 64 46V64H0Z" fill="#0284c7"/>
+
+  <path d="M32 17C23 17 17 21 14 29H50C47 21 41 17 32 17Z" fill="#ef4444"/>
+  <path d="M32 17C32 21 33 25 36 29H50C47 21 41 17 32 17Z" fill="#f97316"/>
+  <path d="M32 17C32 21 31 25 28 29H14C17 21 23 17 32 17Z" fill="#fb7185"/>
+  <path d="M31 29L35 45" stroke="#334155" stroke-width="2.6" stroke-linecap="round"/>
+
+  <circle cx="47" cy="16" r="5" fill="#facc15"/>
+</svg>
