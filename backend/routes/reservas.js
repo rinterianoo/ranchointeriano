@@ -152,7 +152,7 @@ router.post('/', async (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente')
     `, [usuario_id, propiedad_id, fecha_entrada, fecha_salida, num_personas, precioFinal, comentarios]);
 
-    // Enviar email de confirmación (opcional)
+    // Enviar email de confirmación al cliente
     try {
       await transporter.sendMail({
         from: process.env.EMAIL_FROM,
@@ -174,8 +174,66 @@ router.post('/', async (req, res) => {
         `
       });
     } catch (emailError) {
-      console.error('Error al enviar email:', emailError);
-      // No fallar la reserva si el email falla
+      console.error('Error al enviar email al cliente:', emailError);
+    }
+
+    // Enviar notificación al administrador
+    try {
+      await transporter.sendMail({
+        from: process.env.EMAIL_FROM,
+        to: process.env.EMAIL_ADMIN || process.env.EMAIL_USER, // Email del admin
+        subject: '🏖️ Nueva Reserva - Casa Vacacional Monterrico',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2563eb; border-bottom: 3px solid #2563eb; padding-bottom: 10px;">
+              🏖️ ¡Nueva Reserva Recibida!
+            </h2>
+            
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="color: #1e40af; margin-top: 0;">Detalles del Cliente:</h3>
+              <ul style="list-style: none; padding: 0;">
+                <li style="margin: 8px 0;"><strong>👤 Nombre:</strong> ${nombre}</li>
+                <li style="margin: 8px 0;"><strong>📧 Email:</strong> ${email}</li>
+                <li style="margin: 8px 0;"><strong>📱 Teléfono:</strong> ${telefono}</li>
+              </ul>
+            </div>
+
+            <div style="background-color: #ecfdf5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="color: #059669; margin-top: 0;">Detalles de la Reserva:</h3>
+              <ul style="list-style: none; padding: 0;">
+                <li style="margin: 8px 0;"><strong>📅 Entrada:</strong> ${fecha_entrada}</li>
+                <li style="margin: 8px 0;"><strong>📅 Salida:</strong> ${fecha_salida}</li>
+                <li style="margin: 8px 0;"><strong>👥 Personas:</strong> ${num_personas}</li>
+                <li style="margin: 8px 0;"><strong>🌙 Noches:</strong> ${noches}</li>
+                <li style="margin: 8px 0;"><strong>💰 Total:</strong> Q${precioFinal.toFixed(2)}</li>
+                <li style="margin: 8px 0;"><strong>📋 ID Reserva:</strong> #${resultado.insertId}</li>
+              </ul>
+            </div>
+
+            ${comentarios ? `
+            <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="color: #d97706; margin-top: 0;">💬 Comentarios del Cliente:</h3>
+              <p style="margin: 0; font-style: italic;">${comentarios}</p>
+            </div>
+            ` : ''}
+
+            <div style="background-color: #fee2e2; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+              <h3 style="color: #dc2626; margin-top: 0;">⚠️ Acción Requerida</h3>
+              <p style="margin: 10px 0;">Esta reserva está pendiente de confirmación.</p>
+              <p style="margin: 0;"><strong>Por favor, revisa el panel de administración para confirmar o rechazar.</strong></p>
+            </div>
+
+            <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
+            
+            <p style="text-align: center; color: #6b7280; font-size: 14px;">
+              Casa Vacacional Monterrico<br>
+              Sistema de Reservas Automático
+            </p>
+          </div>
+        `
+      });
+    } catch (emailError) {
+      console.error('Error al enviar notificación al administrador:', emailError);
     }
 
     res.status(201).json({
