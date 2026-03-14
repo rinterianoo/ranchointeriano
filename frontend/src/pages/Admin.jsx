@@ -198,9 +198,9 @@ const Admin = () => {
   // Filtrar reservas por tipo
   const reservasPendientes = reservas.filter(r => r.estado === 'pendiente');
   const reservasConfirmadas = reservas.filter(r => r.estado === 'confirmada' || r.estado === 'completada');
-  const reservasPendientes = reservas.filter(r => r.estado === 'pendiente');
+  const todasReservasPendientes = reservas.filter(r => r.estado === 'pendiente');
   const reservasHistorial = reservas.filter(r => r.estado !== 'pendiente');
-  const reservasAMostrar = verHistorial ? reservasHistorial : reservasPendientes;
+  const reservasAMostrar = verHistorial ? reservasHistorial : todasReservasPendientes;
 
   // Paginación
   const totalPaginas = Math.ceil(reservasAMostrar.length / itemsPorPagina);
@@ -382,7 +382,7 @@ const Admin = () => {
                   return diaFecha >= entrada && diaFecha < salida;
                 });
 
-                const tieneReservaPendiente = reservasPendientes.some(r => {
+                const tieneReservaPendiente = todasReservasPendientes.some(r => {
                   const entrada = new Date(r.fecha_entrada);
                   const salida = new Date(r.fecha_salida);
                   const diaFecha = new Date(fecha);
