@@ -1,20 +1,12 @@
 import express from 'express';
 import db from '../config/db.js';
 import { verificarToken, esAdmin } from '../middleware/auth.js';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 const router = express.Router();
 
-// Configurar nodemailer
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
-  }
-});
+// Configurar Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Verificar disponibilidad de fechas
 router.get('/disponibilidad/:propiedadId', async (req, res) => {
@@ -169,11 +161,11 @@ router.post('/', async (req, res) => {
     // Enviar respuesta ANTES de procesar emails (para evitar timeouts)
     res.status(201).json(reservaResponse);
 
-    // PROCESAR EMAILS EN BACKGROUND (reactivado con configuración mejorada)
+    // PROCESAR EMAILS EN BACKGROUND con Resend
     setImmediate(async () => {
       // Verificar configuración de email
-      if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-        console.error('⚠️ Configuración de email incompleta.');
+      if (!process.env.RESEND_API_KEY) {
+        console.error('⚠️ RESEND_API_KEY no configurado.');
         return;
       }
 
@@ -181,35 +173,53 @@ router.post('/', async (req, res) => {
 
       // Enviar email simple al administrador PRIMERO (más importante)
       try {
-        const adminEmail = await transporter.sendMail({
-          from: `"Casa Vacacional Monterrico" <${process.env.EMAIL_USER}>`,
+        const adminEmail = await resend.emails.send({
+          from: 'Casa Vacacional Monterrico <onboarding@resend.dev>',
           to: process.env.EMAIL_USER, // Enviar al mismo email configurado
           subject: `🏖️ Nueva Reserva #${resultado.insertId} - ${nombre}`,
-          text: `
-NUEVA RESERVA RECIBIDA
-
-Cliente: ${nombre}
-Email: ${email}
-Teléfono: ${telefono}
-
-Fechas: ${fecha_entrada} a ${fecha_salida}
-Personas: ${num_personas}
-Noches: ${noches}
-Total: Q${precioFinal.toFixed(2)}
-
-${comentarios ? `Comentarios: ${comentarios}` : 'Sin comentarios adicionales'}
-
-ID Reserva: #${resultado.insertId}
-Estado: Pendiente
-
-Revisar panel de administración para confirmar.
-
----
-Casa Vacacional Monterrico
-Sistema de Reservas
-          `.trim()
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px;">
+              <h2 style="color: #2563eb;">🏖️ Nueva Reserva Recibida</h2>
+              
+              <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                <h3>Detalles del Cliente:</h3>
+                <p><strong>👤 Nombre:</strong> ${nombre}</p>
+                <p><strong>📧 Email:</strong> ${email}</p>
+                <p><strong>📱 Teléfono:</strong> ${telefono}</p>
+              </div>
+              
+              <div style="background: #e8f5e8; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                <h3>Detalles de la Reserva:</h3>
+                <p><strong>📅 Entrada:</strong> ${fecha_entrada}</p>
+                <p><strong>📅 Salida:</strong> ${fecha_salida}</p>
+                <p><strong>👥 Personas:</strong> ${num_personas}</p>
+                <p><strong>🌙 Noches:</strong> ${noches}</p>
+                <p><strong>💰 Total:</strong> Q${precioFinal.toFixed(2)}</p>
+                <p><strong>📋 ID Reserva:</strong> #${resultado.insertId}</p>
+              </div>
+              
+              ${comentarios ? `
+              <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                <h3>💬 Comentarios:</h3>
+                <p>${comentarios}</p>
+              </div>
+              ` : ''}
+              
+              <div style="background: #f8d7da; padding: 15px; border-radius: 5px; margin: 15px 0; text-align: center;">
+                <h3>⚠️ Acción Requerida</h3>
+                <p>Esta reserva está pendiente de confirmación.</p>
+                <p><strong>Revisar panel de administración para confirmar o rechazar.</strong></p>
+              </div>
+              
+              <hr style="margin: 20px 0;">
+              <p style="text-align: center; color: #666; font-size: 12px;">
+                Casa Vacacional Monterrico<br>
+                Sistema de Reservas Automático
+              </p>
+            </div>
+          `
         });
-        console.log('✅ Email admin enviado - ID:', adminEmail.messageId);
+        console.log('✅ Email admin enviado - ID:', adminEmail.id);
       } catch (emailError) {
         console.error('❌ Error email admin:', emailError.message);
       }
@@ -219,8 +229,8 @@ Sistema de Reservas
 
       // Enviar email al cliente (secundario)
       try {
-        const clienteEmail = await transporter.sendMail({
-          from: `"Casa Vacacional Monterrico" <${process.env.EMAIL_USER}>`,
+        const clienteEmail = await resend.emails.send({
+          from: 'Casa Vacacional Monterrico <onboarding@resend.dev>',
           to: email,
           subject: 'Solicitud de Reserva Recibida - Casa Vacacional Monterrico',
           html: `
@@ -242,7 +252,7 @@ Sistema de Reservas
             </div>
           `
         });
-        console.log('✅ Email cliente enviado - ID:', clienteEmail.messageId);
+        console.log('✅ Email cliente enviado - ID:', clienteEmail.id);
       } catch (emailError) {
         console.error('❌ Error email cliente:', emailError.message);
       }
@@ -348,8 +358,8 @@ router.patch('/:id/estado', async (req, res) => {
         }
 
         if (asunto) {
-          await transporter.sendMail({
-            from: process.env.EMAIL_FROM,
+          await resend.emails.send({
+            from: 'Casa Vacacional Monterrico <onboarding@resend.dev>',
             to: reserva.email,
             subject: asunto,
             html: mensaje
