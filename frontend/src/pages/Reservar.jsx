@@ -266,7 +266,7 @@ const Reservar = () => {
         </div>
       )}
 
-      <div className="min-h-screen bg-gray-50 py-6 md:py-12 pt-20 md:pt-24">
+      <div className="min-h-screen bg-gray-50 py-6 md:py-12 pt-28 md:pt-32">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6 md:mb-8 text-center">
           <i className="fas fa-calendar-check text-primary-600 mr-3"></i>
